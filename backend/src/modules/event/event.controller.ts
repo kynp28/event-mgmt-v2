@@ -1,0 +1,47 @@
+import { Request, Response } from 'express';
+import { EventService } from './event.service';
+import { ValidationError } from '../../common/errors/AppError';
+
+export class EventController {
+  constructor(private readonly eventService = new EventService()) {}
+
+  createEvent = async (req: Request, res: Response) => {
+    const organizerId = req.user!.userId;
+    const result = await this.eventService.createEvent(organizerId, req.body);
+    res.status(201).json({ message: 'สร้างอีเวนต์สำเร็จ', data: result });
+  };
+
+  getMyEvents = async (req: Request, res: Response) => {
+    const organizerId = req.user!.userId;
+    const result = await this.eventService.getEventsByOrganizer(organizerId);
+    res.status(200).json({ data: result });
+  };
+
+  getActiveEvents = async (_req: Request, res: Response) => {
+    const result = await this.eventService.getActiveEvents();
+    res.status(200).json({ data: result });
+  };
+
+  getEventById = async (req: Request, res: Response) => {
+    const eventId = parseInt(req.params.id as string, 10);
+    if (isNaN(eventId)) throw new ValidationError('Invalid event ID');
+    const result = await this.eventService.getEventById(eventId);
+    res.status(200).json({ data: result });
+  };
+
+  updateEvent = async (req: Request, res: Response) => {
+    const organizerId = req.user!.userId;
+    const eventId = parseInt(req.params.id as string, 10);
+    if (isNaN(eventId)) throw new ValidationError('Invalid event ID');
+    const result = await this.eventService.updateEvent(eventId, organizerId, req.body);
+    res.status(200).json({ message: 'อัปเดตอีเวนต์สำเร็จ', data: result });
+  };
+
+  deleteEvent = async (req: Request, res: Response) => {
+    const organizerId = req.user!.userId;
+    const eventId = parseInt(req.params.id as string, 10);
+    if (isNaN(eventId)) throw new ValidationError('Invalid event ID');
+    await this.eventService.deleteEvent(eventId, organizerId);
+    res.status(200).json({ message: 'ลบอีเวนต์สำเร็จ' });
+  };
+}
