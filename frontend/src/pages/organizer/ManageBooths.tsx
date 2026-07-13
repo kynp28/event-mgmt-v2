@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Draggable from 'react-draggable';
 import { useRef } from 'react';
 import { Trash2, Save, X, Edit, Plus } from 'lucide-react';
 import api from '../../services/api';
 
-const DraggableBooth = ({ booth, onStop, onClick }: { booth: any, onStop: (e: any, data: any, id: number) => void, onClick: (booth: any) => void }) => {
+const DraggableBooth = ({ booth, onStop, onClick, setHoveredBooth }: any) => {
   const nodeRef = useRef(null);
   const isDragging = useRef(false);
 
@@ -31,16 +32,22 @@ const DraggableBooth = ({ booth, onStop, onClick }: { booth: any, onStop: (e: an
             onClick(booth);
           }
         }}
+        onMouseEnter={() => {
+          if (setHoveredBooth) setHoveredBooth(booth);
+        }}
+        onMouseLeave={() => {
+          if (setHoveredBooth) setHoveredBooth(null);
+        }}
         className="cursor-move flex flex-col items-center justify-center text-xs font-semibold transition-colors hover:brightness-95"
         style={{ 
           position: 'absolute', 
           width: `${booth.width || 80}px`, 
           height: `${booth.height || 60}px`, 
-          backgroundColor: booth.zone?.color ? `${booth.zone.color}33` : (booth.status === 'booked' ? '#fed7aa' : '#bfdbfe'),
-          borderRadius: '2px',
-          color: booth.zone?.color || (booth.status === 'booked' ? '#9a3412' : '#1e3a8a'),
+          backgroundColor: booth.status === 'booked' ? '#fed7aa' : (booth.zone?.color ? `${booth.zone.color}33` : '#bfdbfe'),
+          borderRadius: '4px',
+          color: booth.status === 'booked' ? '#9a3412' : (booth.zone?.color || '#1e3a8a'),
           border: '1px solid',
-          borderColor: booth.zone?.color || (booth.status === 'booked' ? '#fdba74' : '#93c5fd'),
+          borderColor: booth.status === 'booked' ? '#fdba74' : (booth.zone?.color || '#93c5fd'),
           boxShadow: 'none'
         }}
       >
@@ -54,12 +61,15 @@ const DraggableBooth = ({ booth, onStop, onClick }: { booth: any, onStop: (e: an
 export const ManageBooths: React.FC = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
+  const [searchParams] = useSearchParams();
+  const initialEventId = searchParams.get('eventId') ? Number(searchParams.get('eventId')) : '';
+  const [selectedEventId, setSelectedEventId] = useState<number | ''>(initialEventId);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showZoneModal, setShowZoneModal] = useState(false);
   const [newBooth, setNewBooth] = useState({ boothNo: '', price: '', zoneId: '' });
   const [newZone, setNewZone] = useState({ zoneName: '', color: '#3b82f6' });
   const [editingBooth, setEditingBooth] = useState<any>(null);
+  const [hoveredBooth, setHoveredBooth] = useState<any | null>(null);
 
   const { data: myEvents } = useQuery({
     queryKey: ['myEvents'],
@@ -304,8 +314,52 @@ export const ManageBooths: React.FC = () => {
             ) : (
               <div style={{ position: 'relative', width: '2000px', height: '2000px', transformOrigin: 'top left' }}>
                 {booths?.map((booth: any) => (
-                  <DraggableBooth key={booth.boothId} booth={booth} onStop={handleDragStop} onClick={(b) => setEditingBooth({...b})} />
+                  <DraggableBooth 
+                    key={booth.boothId} 
+                    booth={booth} 
+                    onStop={handleDragStop} 
+                    onClick={(b: any) => setEditingBooth({...b})} 
+                    setHoveredBooth={setHoveredBooth}
+                  />
                 ))}
+
+                {hoveredBooth && (
+                  <div style={{
+                    position: 'absolute',
+                    top: Math.max(0, (hoveredBooth.posY || 0) - 10),
+                    left: (hoveredBooth.posX || 0) + (hoveredBooth.width || 80) + 15,
+                    backgroundColor: 'white',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    border: '1px solid var(--border)',
+                    zIndex: 9999,
+                    pointerEvents: 'none',
+                    minWidth: '200px'
+                  }}>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>บูธ {hoveredBooth.boothNo}</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>สถานะ:</span>
+                        <span style={{ fontWeight: 600, color: hoveredBooth.status === 'booked' ? 'var(--danger)' : 'var(--primary)' }}>
+                          {hoveredBooth.status === 'booked' ? 'ถูกจองแล้ว' : 'ว่าง'}
+                        </span>
+                      </div>
+                      {hoveredBooth.zone && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>โซน:</span>
+                          <span style={{ fontWeight: 600, color: hoveredBooth.zone.color || 'var(--text-main)' }}>{hoveredBooth.zone.zoneName}</span>
+                        </div>
+                      )}
+                      {hoveredBooth.price && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>ราคา:</span>
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>฿{hoveredBooth.price}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           ) : (

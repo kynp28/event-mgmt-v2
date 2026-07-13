@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, ArrowUpCircle, Clock } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export const VendorDashboard = () => {
   const { t } = useTranslation();
@@ -12,6 +13,7 @@ export const VendorDashboard = () => {
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [slipImage, setSlipImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const { user } = useAuth();
 
   const { data: bookings, isLoading, refetch } = useQuery({
     queryKey: ['myBookings'],
@@ -20,6 +22,18 @@ export const VendorDashboard = () => {
       return res.data.data;
     }
   });
+
+  const { data: myRequests } = useQuery({
+    queryKey: ['myRequests'],
+    queryFn: async () => {
+      const res = await api.get('/organizer-requests/my');
+      return res.data.data || [];
+    },
+    enabled: !!user && !user.roles.includes('organizer')
+  });
+
+  const hasPendingRequest = myRequests?.some((r: any) => r.status === 'pending');
+  const isOrganizer = user?.roles.includes('organizer');
 
   const openUploadModal = (bookingId: number) => {
     setSelectedBookingId(bookingId);
@@ -63,37 +77,57 @@ export const VendorDashboard = () => {
 
   return (
     <div className="container animate-fade-in">
-      <h1 className="mb-6">{t('my_bookings')}</h1>
+      {!isOrganizer && (
+        <div className="glass-card mb-6" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card-hover)', border: '1px solid var(--border)', padding: '1.5rem' }}>
+          <div>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--text-main)' }}>ยกระดับธุรกิจของคุณ</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>อัปเกรดเป็นผู้จัดงานเพื่อสร้างและจัดการงานแฟร์ของคุณเอง</p>
+          </div>
+          {hasPendingRequest ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--warning)', fontWeight: 600, backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '0.5rem 1rem', borderRadius: '9999px' }}>
+              <Clock size={18} /> คำขอของคุณกำลังรออนุมัติ
+            </div>
+          ) : (
+            <Link to="/vendor/upgrade" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ArrowUpCircle size={18} /> อัปเกรดเป็นผู้จัดงาน
+            </Link>
+          )}
+        </div>
+      )}
+
+      <h1 style={{ marginBottom: '1.5rem' }}>{t('my_bookings', 'การจองของฉัน')}</h1>
       
       {!bookings || bookings.length === 0 ? (
         <div className="glass-card text-center" style={{ padding: '4rem 1rem' }}>
-          <p className="text-muted">{t('no_bookings_yet')}</p>
+          <p className="text-muted">{t('no_bookings_yet', 'ยังไม่มีการจองบูธ')}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
           {bookings.map((b: any) => (
             <div key={b.bookingId} className="glass-card">
               <h3>{b.event?.eventName}</h3>
-              <p className="text-muted mt-2">{t('booth')}: {b.booth?.boothNo}</p>
-              <p className="font-bold text-lg mt-2 text-primary">฿{b.totalAmount}</p>
+              <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>{t('booth', 'บูธ')}: {b.booth?.boothNo}</p>
+              <p style={{ fontWeight: 700, fontSize: '1.125rem', marginTop: '0.5rem', color: 'var(--primary)' }}>฿{b.totalAmount}</p>
               
-              <div className="flex justify-between items-center mt-4">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
                 <span className={`badge ${b.status === 'confirmed' ? 'badge-success' : 'badge-warning'}`}>
-                  {b.status}
+                  {b.status === 'confirmed' ? t('confirmed', 'ยืนยันแล้ว') : 
+                   b.status === 'pending' ? t('pending', 'รอตรวจสอบ') : 
+                   b.status === 'cancelled' ? t('cancelled', 'ยกเลิกแล้ว') : b.status}
                 </span>
-                <Link to={`/invoice/${b.bookingId}`} className="text-primary text-sm hover:underline">
-                  View Invoice
+                <Link to={`/invoice/${b.bookingId}`} style={{ color: 'var(--primary)', fontSize: '0.875rem', textDecoration: 'none' }} className="hover-underline">
+                  {t('view_invoice', 'ดูใบแจ้งหนี้')}
                 </Link>
               </div>
 
               {b.status === 'pending' && !b.payment && (
-                <div className="mt-4 pt-4 border-t border-[color:var(--border)]">
-                  <button className="btn btn-primary w-full" onClick={() => openUploadModal(b.bookingId)}>{t('upload_payment', 'อัปโหลดสลิปโอนเงิน')}</button>
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                  <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => openUploadModal(b.bookingId)}>{t('upload_payment', 'อัปโหลดสลิปโอนเงิน')}</button>
                 </div>
               )}
               {b.status === 'pending' && b.payment && (
-                <div className="mt-4 pt-4 border-t border-[color:var(--border)] text-center text-sm font-medium" style={{ color: 'var(--primary)' }}>
-                  ส่งสลิปแล้ว กำลังรอผู้จัดงานตรวจสอบ...
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '0.875rem', fontWeight: 500, color: 'var(--primary)' }}>
+                  {t('payment_submitted', 'ส่งสลิปแล้ว กำลังรอผู้จัดงานตรวจสอบ...')}
                 </div>
               )}
             </div>

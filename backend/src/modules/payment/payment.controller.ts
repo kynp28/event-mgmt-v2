@@ -35,12 +35,13 @@ export class PaymentController {
   };
 
   verifyPayment = async (req: Request, res: Response) => {
-    const adminId = req.user!.userId;
+    const userId = req.user!.userId;
+    const isAdmin = req.user!.roles.includes('admin');
     const paymentId = parseInt(req.params.id as string, 10);
     if (isNaN(paymentId)) throw new ValidationError('Invalid payment ID');
     const status = req.body.status as PaymentStatus;
 
-    const result = await this.paymentService.verifyPayment(paymentId, status, adminId);
+    const result = await this.paymentService.verifyPayment(paymentId, status, userId, isAdmin);
     res.status(200).json({ message: `เปลี่ยนสถานะเป็น ${status} สำเร็จ`, data: result });
   };
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, MapPin, Search } from 'lucide-react';
@@ -138,26 +138,47 @@ export const BrowseEvents: React.FC = () => {
                     </div>
                   </div>
                   <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 700 }}>{event.eventName}</h3>
+                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', fontWeight: 700, color: 'var(--text-main)' }}>{event.eventName}</h3>
                     
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                      <Calendar size={16} />
-                      {new Date(event.startDate).toLocaleDateString('th-TH')} - {new Date(event.endDate).toLocaleDateString('th-TH')}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                      <MapPin size={16} />
-                      {event.location}
+                    {event.description && (
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {event.description}
+                      </p>
+                    )}
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: event.description ? '0' : '0.5rem', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        <Calendar size={16} color="var(--primary)" />
+                        {new Date(event.startDate).toLocaleDateString('th-TH')} - {new Date(event.endDate).toLocaleDateString('th-TH')}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        <MapPin size={16} color="var(--danger)" />
+                        {event.location}
+                      </div>
                     </div>
 
-                    <div style={{ marginTop: 'auto', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>บูธว่างทั้งหมด</span>
-                        <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{event._count?.booths ?? 0} บูธ</span>
+                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.875rem', backgroundColor: 'var(--bg-card-hover)', padding: '0.75rem', borderRadius: '8px' }}>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>ทั้งหมด</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{event.boothStats?.total ?? 0}</div>
+                        </div>
+                        <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>ว่าง</div>
+                          <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{event.boothStats?.available ?? 0}</div>
+                        </div>
+                        <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
+                        <div style={{ textAlign: 'center', flex: 1 }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>จองแล้ว</div>
+                          <div style={{ fontWeight: 700, color: 'var(--danger)' }}>{event.boothStats?.booked ?? 0}</div>
+                        </div>
                       </div>
+                      
                       <button 
                         onClick={() => navigate(`/events/${event.eventId}`)}
                         className="btn btn-primary"
-                        style={{ padding: '0.5rem 1.25rem', borderRadius: '8px' }}
+                        style={{ width: '100%', padding: '0.75rem 1.25rem', borderRadius: '8px', fontWeight: 600 }}
                       >
                         ดูผังบูธ
                       </button>

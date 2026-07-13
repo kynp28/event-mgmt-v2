@@ -43,7 +43,6 @@ async function seed() {
     });
     await prisma.userRole.upsert({ where: { userId_roleId: { userId: vendor.userId, roleId: vendorRole.roleId } }, update: {}, create: { userId: vendor.userId, roleId: vendorRole.roleId } });
 
-    // 3. Create Dummy Event & Booths
     const event = await prisma.event.create({
       data: {
         organizerId: org.userId,
@@ -62,6 +61,7 @@ async function seed() {
       }
     });
 
+    console.log('✅ Created Event:', event.eventName);
     console.log('✅ Seeding completed successfully!');
     console.log('-------------------------------------------');
     console.log('🔑 Test Accounts (Password for all is: password123)');

@@ -36,7 +36,7 @@ export class AuthService {
     await this.authRepository.assignRole(user.userId, input.role);
     const roles = await this.authRepository.getUserRoles(user.userId);
 
-    const token = signToken({ userId: user.userId, roles });
+    const token = signToken({ userId: user.userId, username: user.username, roles });
 
     return {
       token,
@@ -65,7 +65,7 @@ export class AuthService {
     }
 
     const roles = await this.authRepository.getUserRoles(user.userId);
-    const token = signToken({ userId: user.userId, roles });
+    const token = signToken({ userId: user.userId, username: user.username, roles });
 
     return {
       token,

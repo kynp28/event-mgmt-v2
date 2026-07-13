@@ -7,6 +7,7 @@ export class EventService {
 
   async createEvent(organizerId: number, input: {
     eventName: string;
+    description?: string;
     location?: string;
     imageUrl?: string;
     startDate: string;
@@ -19,6 +20,7 @@ export class EventService {
     return this.eventRepository.createEvent({
       organizerId,
       eventName: input.eventName,
+      description: input.description,
       location: input.location,
       imageUrl: input.imageUrl,
       startDate: new Date(input.startDate),
@@ -26,14 +28,29 @@ export class EventService {
     });
   }
 
-  async getEventsByOrganizer(organizerId: number) {
-    return this.eventRepository.findEvents({ organizerId });
+  private mapBoothStats(event: any) {
+    if (!event.booths) return event;
+    const total = event.booths.length;
+    const available = event.booths.filter((b: any) => b.status === 'available').length;
+    const booked = event.booths.filter((b: any) => b.status === 'booked').length;
+    
+    const { booths, ...rest } = event;
+    return {
+      ...rest,
+      boothStats: { total, available, booked }
+    };
   }
 
-  async getActiveEvents() {
-    return this.eventRepository.findEvents({
+  async getEventsByOrganizer(organizerId: number, skip: number = 0, take: number = 50) {
+    const events = await this.eventRepository.findEvents({ organizerId }, skip, take);
+    return events.map(this.mapBoothStats);
+  }
+
+  async getActiveEvents(skip: number = 0, take: number = 50) {
+    const events = await this.eventRepository.findEvents({
       eventStatus: { in: ['open', 'closed'] },
-    });
+    }, skip, take);
+    return events.map(this.mapBoothStats);
   }
 
   async getEventById(eventId: number) {
@@ -49,6 +66,7 @@ export class EventService {
     organizerId: number, 
     input: {
       eventName?: string;
+      description?: string;
       location?: string;
       imageUrl?: string;
       startDate?: string;
@@ -72,6 +90,7 @@ export class EventService {
 
     const updateData: Prisma.EventUncheckedUpdateInput = {};
     if (input.eventName !== undefined) updateData.eventName = input.eventName;
+    if (input.description !== undefined) updateData.description = input.description;
     if (input.location !== undefined) updateData.location = input.location;
     if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
     if (input.startDate !== undefined) updateData.startDate = newStartDate;

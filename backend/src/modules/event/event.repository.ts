@@ -13,16 +13,17 @@ export class EventRepository {
     });
   }
 
-  async findEvents(where: Prisma.EventWhereInput): Promise<Event[]> {
+  async findEvents(where: Prisma.EventWhereInput, skip?: number, take?: number): Promise<Event[]> {
     return prisma.event.findMany({
       where: { ...where, deletedAt: null },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
       include: { 
         organizer: { select: { username: true } },
-        _count: {
-          select: {
-            booths: { where: { status: 'available', deletedAt: null } }
-          }
+        booths: {
+          where: { deletedAt: null },
+          select: { status: true }
         }
       }
     });

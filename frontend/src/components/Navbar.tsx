@@ -62,10 +62,10 @@ export const Navbar = () => {
       {/* Navigation Content */}
       <div className={`nav-content-wrapper ${isMenuOpen ? 'open' : ''}`} style={{ flex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="auth-nav-links" style={{ display: 'flex', gap: '2rem', whiteSpace: 'nowrap', flex: 1, justifyContent: 'center' }}>
-          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-main)', textDecoration: 'none', fontWeight: 600 }}>{t('home', 'หน้าหลัก')}</Link>
-          <Link to="/#events-section" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('active_events', 'งานแฟร์')}</Link>
-          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>ราคา/แพ็กเกจ</Link>
-          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('about', 'เกี่ยวกับเรา')}</Link>
+          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-main)', textDecoration: 'none', fontWeight: 600 }}>{t('home')}</Link>
+          <Link to="/#events-section" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('active_events')}</Link>
+          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('pricing')}</Link>
+          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('about')}</Link>
         </div>
 
         <div className="nav-actions-wrapper flex gap-4 items-center" style={{ whiteSpace: 'nowrap', flex: 1, justifyContent: 'flex-end' }}>
@@ -86,8 +86,8 @@ export const Navbar = () => {
             </>
           ) : (
             <div className="flex items-center gap-4 auth-buttons-mobile">
-              <Link to="/login" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-main)', fontWeight: 600, textDecoration: 'none' }}>เข้าสู่ระบบ</Link>
-              <Link to="/register" className="auth-nav-btn" onClick={() => setIsMenuOpen(false)} style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '0.5rem 1.25rem', borderRadius: '8px', fontWeight: 600, textDecoration: 'none' }}>สำหรับผู้จัดงาน</Link>
+              <Link to="/login" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-main)', fontWeight: 600, textDecoration: 'none' }}>{t('login')}</Link>
+              <Link to="/register" className="auth-nav-btn" onClick={() => setIsMenuOpen(false)} style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '0.5rem 1.25rem', borderRadius: '8px', fontWeight: 600, textDecoration: 'none' }}>{t('get_started')}</Link>
             </div>
           )}
 

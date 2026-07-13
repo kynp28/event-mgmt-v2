@@ -83,10 +83,24 @@ export const ManageEvents: React.FC = () => {
                         borderRadius: '9999px', 
                         fontSize: '0.75rem', 
                         fontWeight: 500, 
-                        backgroundColor: event.eventStatus === 'open' ? 'rgba(34, 197, 94, 0.1)' : event.eventStatus === 'closed' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
-                        color: event.eventStatus === 'open' ? 'var(--success)' : event.eventStatus === 'closed' ? 'var(--danger)' : 'var(--warning)' 
+                        backgroundColor: 
+                          event.eventStatus === 'open' ? 'rgba(34, 197, 94, 0.1)' : 
+                          event.eventStatus === 'closed' ? 'rgba(239, 68, 68, 0.1)' : 
+                          event.eventStatus === 'ended' ? 'rgba(100, 116, 139, 0.1)' :
+                          event.eventStatus === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' :
+                          'rgba(245, 158, 11, 0.1)', 
+                        color: 
+                          event.eventStatus === 'open' ? 'var(--success)' : 
+                          event.eventStatus === 'closed' ? 'var(--danger)' : 
+                          event.eventStatus === 'ended' ? 'var(--text-muted)' :
+                          event.eventStatus === 'cancelled' ? 'var(--danger)' :
+                          'var(--warning)' 
                       }}>
-                        {event.eventStatus === 'open' ? 'เปิดรับจอง' : event.eventStatus === 'closed' ? 'ปิดรับจอง' : 'ฉบับร่าง'}
+                        {event.eventStatus === 'open' ? 'เปิดรับจอง' : 
+                         event.eventStatus === 'closed' ? 'ปิดรับจอง' : 
+                         event.eventStatus === 'ended' ? 'สิ้นสุดแล้ว' :
+                         event.eventStatus === 'cancelled' ? 'ยกเลิก' :
+                         'ฉบับร่าง'}
                       </div>
                     </td>
                     <td style={{ padding: '1.25rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
@@ -104,7 +118,7 @@ export const ManageEvents: React.FC = () => {
                     <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                         <button 
-                          onClick={() => navigate(`/organizer/booths/manage`)} 
+                          onClick={() => navigate(`/organizer/booths/manage?eventId=${event.eventId}`)} 
                           style={{ padding: '0.5rem', backgroundColor: 'var(--bg-dark)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--primary)', cursor: 'pointer' }}
                           title="จัดการผังบูธ"
                         >

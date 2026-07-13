@@ -17,8 +17,16 @@ export const AdminDashboard = () => {
     }
   });
 
-  if (isLoading) return <div className="container mt-10 text-center animate-pulse" style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลแดชบอร์ด...</div>;
-  if (!stats) return <div className="container mt-10 text-center" style={{ color: 'var(--text-muted)' }}>ไม่พบข้อมูลสถิติ</div>;
+  const { data: pendingRequests } = useQuery({
+    queryKey: ['pendingRequests'],
+    queryFn: async () => {
+      const res = await api.get('/organizer-requests?status=pending');
+      return res.data.data || [];
+    }
+  });
+
+  if (isLoading) return <div className="container mt-10 text-center animate-pulse" style={{ color: 'var(--text-muted)' }}>{t('loading_dashboard', 'กำลังโหลดข้อมูลแดชบอร์ด...')}</div>;
+  if (!stats) return <div className="container mt-10 text-center" style={{ color: 'var(--text-muted)' }}>{t('no_stats', 'ไม่พบข้อมูลสถิติ')}</div>;
 
   return (
     <div className="animate-fade-in" style={{ backgroundColor: 'var(--bg-dark)', minHeight: 'calc(100vh - 80px)', padding: '2rem 0' }}>
@@ -31,7 +39,7 @@ export const AdminDashboard = () => {
               {t('admin_dashboard', 'แอดมินแดชบอร์ด')}
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-              ยินดีต้อนรับ, {user?.username || 'ผู้ดูแลระบบ'} 🛡️ ดูภาพรวมของระบบและจัดการข้อมูลได้ที่นี่
+              {t('welcome_admin', 'ยินดีต้อนรับ, {{name}} 🛡️ ดูภาพรวมของระบบและจัดการข้อมูลได้ที่นี่', { name: user?.username || 'ผู้ดูแลระบบ' })}
             </p>
           </div>
           <div className="dashboard-header-actions" style={{ display: 'flex', gap: '1rem' }}>
@@ -90,15 +98,15 @@ export const AdminDashboard = () => {
           <div className="lg:col-span-2 glass-card" style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Activity size={20} color="var(--primary)" /> รายการความเคลื่อนไหวล่าสุด (System Activity)
+                <Activity size={20} color="var(--primary)" /> {t('system_activity', 'รายการความเคลื่อนไหวล่าสุด (System Activity)')}
               </h3>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                ดูทั้งหมด <ChevronRight size={16} />
+                {t('view_all', 'ดูทั้งหมด')} <ChevronRight size={16} />
               </span>
             </div>
             <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
-              <p>ระบบตรวจสอบความเคลื่อนไหวและสถิติการใช้งานจะแสดงผลที่นี่</p>
-              <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>(อยู่ระหว่างการพัฒนา)</p>
+              <p>{t('activity_desc', 'ระบบตรวจสอบความเคลื่อนไหวและสถิติการใช้งานจะแสดงผลที่นี่')}</p>
+              <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>{t('under_development', '(อยู่ระหว่างการพัฒนา)')}</p>
             </div>
           </div>
 
@@ -106,17 +114,23 @@ export const AdminDashboard = () => {
             <div style={{ marginBottom: '1.5rem' }}>
               <ShieldCheck size={32} color="#38BDF8" />
             </div>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'white' }}>สถานะระบบ (System Health)</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'white' }}>{t('system_health', 'สถานะระบบ (System Health)')}</h3>
             <p style={{ fontSize: '0.875rem', lineHeight: 1.6, opacity: 0.8, marginBottom: '1.5rem' }}>
-              ระบบทำงานปกติ ไม่มีรายงานความขัดข้อง เซิร์ฟเวอร์ฐานข้อมูลทำงานเต็มประสิทธิภาพ
+              {t('health_desc', 'ระบบทำงานปกติ ไม่มีรายงานความขัดข้อง เซิร์ฟเวอร์ฐานข้อมูลทำงานเต็มประสิทธิภาพ')}
             </p>
             
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+            <Link to="/admin/organizer-requests" style={{ display: 'block', backgroundColor: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '0.75rem', textDecoration: 'none', color: 'white' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>คำร้องขอเป็นผู้จัดงาน (รออนุมัติ)</span>
-                <span style={{ fontWeight: 600, color: '#FDE047' }}><AlertTriangle size={14} className="inline mr-1" /> 0 รายการ</span>
+                <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>{t('pending_organizer_requests', 'คำร้องขอเป็นผู้จัดงาน (รออนุมัติ)')}</span>
+                <span style={{ fontWeight: 600, color: '#FDE047' }}><AlertTriangle size={14} className="inline mr-1" /> {pendingRequests?.length || 0} {t('items', 'รายการ')}</span>
               </div>
-            </div>
+            </Link>
+            <Link to="/admin/payments" style={{ display: 'block', backgroundColor: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '8px', textDecoration: 'none', color: 'white' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>ตรวจสอบการชำระเงิน</span>
+                <span style={{ fontWeight: 600, color: '#38BDF8' }}><CircleDollarSign size={14} className="inline mr-1" /> ดูสลิป</span>
+              </div>
+            </Link>
           </div>
         </div>
 

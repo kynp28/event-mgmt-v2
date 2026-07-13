@@ -57,6 +57,14 @@ export class BookingService {
       throw new ForbiddenError('คุณไม่มีสิทธิ์จัดการการจองในอีเวนต์นี้');
     }
 
+    // ถ้าต้องการ Confirm การจอง ต้องมีการชำระเงินที่ผ่านการตรวจสอบแล้ว
+    if (status === 'confirmed') {
+      const payment = (booking as any).payment;
+      if (!payment || payment.status !== 'verified') {
+        throw new ConflictError('ไม่สามารถยืนยันการจองได้ เนื่องจากยังไม่มีการชำระเงินที่ผ่านการตรวจสอบ');
+      }
+    }
+
     return this.bookingRepository.updateBookingStatusWithTransaction(bookingId, status, booking.boothId);
   }
 }

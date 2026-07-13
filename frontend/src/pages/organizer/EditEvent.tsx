@@ -8,6 +8,7 @@ import api from '../../services/api';
 export const EditEvent: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [eventName, setEventName] = useState('');
+  const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [location, setLocation] = useState('');
@@ -27,6 +28,7 @@ export const EditEvent: React.FC = () => {
         const res = await api.get(`/events/${id}`);
         const event = res.data.data;
         setEventName(event.eventName);
+        setDescription(event.description || '');
         
         // Format dates for datetime-local input
         const formatForInput = (dateString: string) => {
@@ -118,6 +120,7 @@ export const EditEvent: React.FC = () => {
     try {
       await api.patch(`/events/${id}`, {
         eventName,
+        description,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
         location,
@@ -188,6 +191,11 @@ export const EditEvent: React.FC = () => {
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('event_name')}</label>
                 <input style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={eventName} onChange={e => setEventName(e.target.value)} required placeholder="เช่น งานกาชาดประจำปี 2026" />
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>คำอธิบายงาน (Description)</label>
+                <textarea style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', minHeight: '100px', resize: 'vertical' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="เขียนคำอธิบายรายละเอียดงาน เพื่อดึงดูดผู้เช่าบูธ..." />
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -290,11 +298,17 @@ export const EditEvent: React.FC = () => {
 
               {/* Event Info Details */}
               <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem', wordBreak: 'break-word' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem', wordBreak: 'break-word' }}>
                   {eventName || 'ชื่ออีเวนต์ของคุณ'}
                 </h3>
                 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {description && (
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {description}
+                  </p>
+                )}
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: description ? '0' : '0.75rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                     <Calendar size={16} color="var(--primary)" />
                     <span>

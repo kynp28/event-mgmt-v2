@@ -149,6 +149,7 @@ model Event {
   eventId      Int         @id @default(autoincrement()) @map("event_id")
   organizerId  Int         @map("organizer_id")
   eventName    String      @map("event_name") @db.VarChar(200)
+  description  String?     @db.Text
   location     String?     @db.Text
   imageUrl     String?     @map("image_url") @db.LongText
   startDate    DateTime    @map("start_date")

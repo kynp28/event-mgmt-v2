@@ -45,13 +45,15 @@ export class PaymentService {
     return this.paymentRepository.findAllPendingPayments(organizerId);
   }
 
-  async verifyPayment(paymentId: number, status: PaymentStatus, verifierId: number) {
+  async verifyPayment(paymentId: number, status: PaymentStatus, verifierId: number, isAdmin: boolean = false) {
     const payment = await this.paymentRepository.findPaymentById(paymentId);
     if (!payment) throw new NotFoundError('ไม่พบข้อมูลชำระเงิน');
     if (payment.status !== 'pending') throw new ConflictError('การชำระเงินนี้ได้รับการตรวจสอบแล้ว');
 
-    // Admin or Organizer can verify depending on RBAC at router level.
-    // (Assuming router level RBAC handles permissions, we just execute here)
+    // Security: ถ้าไม่ใช่ Admin ต้องเป็นเจ้าของ Event ที่เกี่ยวข้องเท่านั้น
+    if (!isAdmin && payment.booking?.event?.organizerId !== verifierId) {
+      throw new ForbiddenError('คุณไม่มีสิทธิ์ยืนยันการชำระเงินนี้');
+    }
 
     return this.paymentRepository.updatePaymentStatusWithTransaction(paymentId, status, verifierId, payment.bookingId);
   }

@@ -10,12 +10,12 @@ export class AuthController {
   register = async (req: Request, res: Response): Promise<void> => {
     const input = req.body as RegisterInput;
     const result = await this.authService.register(input);
-    res.status(201).json({ message: 'สมัครสมาชิกสำเร็จ', ...result });
+    res.status(201).json({ success: true, message: 'สมัครสมาชิกสำเร็จ', data: result });
   };
 
   login = async (req: Request, res: Response): Promise<void> => {
     const input = req.body as LoginInput;
     const result = await this.authService.login(input);
-    res.status(200).json({ message: 'เข้าสู่ระบบสำเร็จ', ...result });
+    res.status(200).json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', data: result });
   };
 }

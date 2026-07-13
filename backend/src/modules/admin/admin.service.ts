@@ -1,9 +1,13 @@
 import { prisma } from '../../config/prisma';
+import { UserStatus } from '@prisma/client';
+import { NotFoundError } from '../../common/errors/AppError';
 
 export class AdminService {
-  async getAllEvents() {
+  async getAllEvents(skip: number = 0, take: number = 50) {
     return prisma.event.findMany({
       where: { deletedAt: null },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
       include: {
         organizer: {
@@ -19,8 +23,11 @@ export class AdminService {
     });
   }
 
-  async getAllUsers() {
+  async getAllUsers(skip: number = 0, take: number = 50) {
     return prisma.user.findMany({
+      where: { deletedAt: null },
+      skip,
+      take,
       orderBy: { createdAt: 'desc' },
       omit: { passwordHash: true },
       include: {
@@ -34,6 +41,19 @@ export class AdminService {
           }
         }
       }
+    });
+  }
+
+  async updateUserStatus(userId: number, status: UserStatus) {
+    const user = await prisma.user.findUnique({ where: { userId, deletedAt: null } });
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    
+    return prisma.user.update({
+      where: { userId },
+      data: { status },
+      omit: { passwordHash: true }
     });
   }
 }

@@ -15,6 +15,7 @@ import { ManageEvents } from './pages/organizer/ManageEvents';
 import { EditEvent } from './pages/organizer/EditEvent';
 import { EventDetails } from './pages/vendor/EventDetails';
 import { ManageBookings } from './pages/organizer/ManageBookings';
+import { OrganizerRequestForm } from './pages/vendor/OrganizerRequestForm';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -22,6 +23,8 @@ import { BrowseEvents } from './pages/BrowseEvents';
 
 import AdminEvents from './pages/admin/AdminEvents';
 import AdminUsers from './pages/admin/AdminUsers';
+import { OrganizerRequestsAdmin } from './pages/admin/OrganizerRequestsAdmin';
+import { VerifyPayments } from './pages/admin/VerifyPayments';
 
 const queryClient = new QueryClient();
 
@@ -43,6 +46,8 @@ function App() {
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/admin/events" element={<AdminEvents />} />
               <Route path="/admin/users" element={<AdminUsers />} />
+              <Route path="/admin/organizer-requests" element={<OrganizerRequestsAdmin />} />
+              <Route path="/admin/payments" element={<VerifyPayments />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRole="organizer" />}>
@@ -56,6 +61,7 @@ function App() {
 
             <Route element={<ProtectedRoute requiredRole="vendor" />}>
               <Route path="/vendor" element={<VendorDashboard />} />
+              <Route path="/vendor/upgrade" element={<OrganizerRequestForm />} />
               <Route path="/invoice/:id" element={<Invoice />} />
             </Route>
           </Routes>
