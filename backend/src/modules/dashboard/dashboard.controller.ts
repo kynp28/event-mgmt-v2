@@ -6,12 +6,12 @@ export class DashboardController {
 
   getAdminStats = async (_req: Request, res: Response) => {
     const result = await this.dashboardService.getAdminDashboard();
-    res.status(200).json({ data: result });
+    res.status(200).json({ success: true, data: result });
   };
 
   getOrganizerStats = async (req: Request, res: Response) => {
     const organizerId = req.user!.userId;
     const result = await this.dashboardService.getOrganizerDashboard(organizerId);
-    res.status(200).json({ data: result });
+    res.status(200).json({ success: true, data: result });
   };
 }

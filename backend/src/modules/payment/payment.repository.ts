@@ -50,7 +50,13 @@ export class PaymentRepository {
     });
   }
 
-  async updatePaymentStatusWithTransaction(paymentId: number, status: PaymentStatus, verifiedBy: number, bookingId: number): Promise<Payment> {
+  async updatePaymentStatusWithTransaction(
+    paymentId: number, 
+    status: PaymentStatus, 
+    verifiedBy: number, 
+    bookingId: number,
+    options?: { reason?: string; action?: 'request_reupload' | 'cancel_booking' }
+  ): Promise<Payment> {
     return prisma.$transaction(async (tx) => {
       const payment = await tx.payment.update({
         where: { paymentId },
@@ -62,10 +68,46 @@ export class PaymentRepository {
       });
 
       if (status === 'verified') {
-        await tx.booking.update({
+        const confirmedBooking = await tx.booking.update({
           where: { bookingId },
-          data: { status: 'confirmed' }
+          data: { status: 'confirmed', cancelReason: null }
         });
+        
+        await tx.booth.update({
+          where: { boothId: confirmedBooking.boothId },
+          data: { status: 'booked', lockState: 'none' }
+        });
+      } else if (status === 'rejected') {
+        const reason = options?.reason || 'สลิปไม่ถูกต้อง';
+        const action = options?.action || 'request_reupload';
+
+        if (action === 'cancel_booking') {
+          const cancelledBooking = await tx.booking.update({
+            where: { bookingId },
+            data: { status: 'cancelled', cancelReason: reason }
+          });
+
+          await tx.booth.update({
+            where: { boothId: cancelledBooking.boothId },
+            data: { 
+              status: 'available', 
+              lockState: 'none', 
+              lockedByUserId: null, 
+              lockedAt: null, 
+              lockedUntil: null 
+            }
+          });
+        } else {
+          // request_reupload: booking remains pending so vendor can upload a new slip
+          // Extend payment deadline by 30 minutes so vendor has time to upload new slip
+          await tx.booking.update({
+            where: { bookingId },
+            data: { 
+              cancelReason: `สลิปไม่ถูกต้อง: ${reason}`,
+              paymentDeadline: new Date(Date.now() + 30 * 60 * 1000)
+            }
+          });
+        }
       }
 
       return payment;

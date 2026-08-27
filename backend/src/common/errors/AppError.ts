@@ -29,10 +29,13 @@ export class UnauthorizedError extends AppError {
   }
 }
 
-// 403 — เข้าสู่ระบบแล้วแต่ไม่มีสิทธิ์ทำรายการนี้
+// 403 — เข้าสู่ระบบแล้วแต่ไม่มีสิทธิ์ทำรายการนี้ หรือถูกระงับ
 export class ForbiddenError extends AppError {
-  constructor(message = 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้') {
+  public readonly details?: unknown;
+
+  constructor(message = 'ไม่มีสิทธิ์เข้าถึงข้อมูลนี้', details?: unknown) {
     super(message, 403);
+    this.details = details;
   }
 }
 

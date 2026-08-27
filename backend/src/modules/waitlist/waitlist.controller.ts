@@ -16,4 +16,10 @@ export class WaitlistController {
     const result = await this.waitlistService.getWaitlistByEvent(eventId);
     res.status(200).json({ data: result });
   };
+
+  getMyWaitlist = async (req: Request, res: Response) => {
+    const vendorId = req.user!.userId;
+    const result = await this.waitlistService.getMyWaitlist(vendorId);
+    res.status(200).json({ data: result });
+  };
 }

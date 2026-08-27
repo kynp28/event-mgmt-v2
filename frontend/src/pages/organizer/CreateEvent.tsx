@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Calendar, MapPin, X, Image as ImageIcon, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, X, Image as ImageIcon, Users, ChevronLeft, ChevronRight, FileText, Upload } from 'lucide-react';
 import api from '../../services/api';
 
 export const CreateEvent: React.FC = () => {
@@ -11,11 +11,31 @@ export const CreateEvent: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [location, setLocation] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [invoiceUrl, setInvoiceUrl] = useState<string>('');
+  const [invoiceFileName, setInvoiceFileName] = useState<string>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
   const { t } = useTranslation();
+
+  const handleInvoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('ไฟล์ใบแจ้งหนี้ต้องมีขนาดไม่เกิน 10MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setInvoiceUrl(reader.result as string);
+      setInvoiceFileName(file.name);
+      setError('');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -80,6 +100,7 @@ export const CreateEvent: React.FC = () => {
         endDate: new Date(endDate).toISOString(),
         location,
         imageUrl: images.length > 0 ? JSON.stringify(images) : undefined,
+        invoiceUrl: invoiceUrl || undefined,
       });
       navigate('/organizer/events');
     } catch (err: any) {
@@ -100,19 +121,26 @@ export const CreateEvent: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+        {error && (
+          <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--danger)', color: 'var(--danger)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{error}</span>
+            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><X size={18} /></button>
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)', gap: '2rem' }}>
           
           {/* LEFT COLUMN: FORM */}
-          <div className="glass-card" style={{ alignSelf: 'start' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '1.5rem' }}>ข้อมูลงานแฟร์</h2>
-            {error && <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>{error}</div>}
-            
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>รูปภาพแบนเนอร์/โปสเตอร์ (สูงสุด 4 รูป)</label>
-                
+              
+              {/* Event Images Upload */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                  รูปภาพประกอบงาน (สูงสุด 4 รูป)
+                </label>
                 {images.length > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '0.75rem' }}>
                     {images.map((img, idx) => (
                       <div key={idx} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
                         <img src={img} alt={`Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -123,16 +151,62 @@ export const CreateEvent: React.FC = () => {
                     ))}
                   </div>
                 )}
-
                 {images.length < 4 && (
-                  <div style={{ position: 'relative', border: '2px dashed var(--border)', borderRadius: '8px', backgroundColor: 'var(--bg-card-hover)', padding: '2rem 1rem', textAlign: 'center', transition: 'background-color 0.2s' }}>
+                  <div style={{ position: 'relative', border: '2px dashed var(--border)', borderRadius: '8px', backgroundColor: 'var(--bg-card-hover)', padding: '1.5rem 1rem', textAlign: 'center', transition: 'background-color 0.2s' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--text-muted)' }}>
-                      <ImageIcon size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                      <ImageIcon size={28} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
                       <div style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 600 }}>คลิกเพื่ออัปโหลดรูปภาพ</div>
                       <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>PNG, JPG สูงสุด 5MB (อัปโหลดเพิ่มได้อีก {4 - images.length} รูป)</div>
                     </div>
                     <input type="file" multiple style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} accept="image/*" onChange={handleImageUpload} />
                   </div>
+                )}
+              </div>
+
+              {/* Invoice Upload Section */}
+              <div style={{ marginBottom: '1.5rem', padding: '1.25rem', backgroundColor: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileText size={18} color="var(--primary)" /> ใบแจ้งหนี้ / ใบเสร็จรับเงินประจำอีเวนต์ (Invoice/Receipt)
+                  </label>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>JPG, PNG, PDF (≤10MB)</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  ไฟล์นี้จะแสดงเมื่อผู้เช่าบูธกด "ดูใบแจ้งหนี้" ในรายการจองของตนเอง
+                </p>
+
+                {invoiceUrl ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+                      {invoiceUrl.startsWith('data:application/pdf') ? (
+                        <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#ef4444', color: 'white', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          PDF
+                        </div>
+                      ) : (
+                        <img src={invoiceUrl} alt="Invoice preview" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px' }} />
+                      )}
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                          {invoiceFileName || 'ไฟล์ใบแจ้งหนี้ที่อัปโหลดแล้ว'}
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>✓ พร้อมแสดงในหน้า Invoice</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setInvoiceUrl(''); setInvoiceFileName(''); }}
+                      style={{ padding: '0.35rem 0.65rem', border: '1px solid rgba(239, 68, 68, 0.3)', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      <X size={14} /> ลบไฟล์
+                    </button>
+                  </div>
+                ) : (
+                  <label style={{ border: '2px dashed var(--border)', borderRadius: '6px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--bg-card)', transition: 'border-color 0.2s' }}>
+                    <Upload size={20} color="var(--primary)" style={{ marginBottom: '0.25rem' }} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>คลิกเพื่ออัปโหลดใบแจ้งหนี้ / ใบเสร็จ</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>รองรับไฟล์รูปภาพ JPG, PNG หรือไฟล์เอกสาร PDF</span>
+                    <input type="file" accept="image/*,application/pdf" onChange={handleInvoiceUpload} style={{ display: 'none' }} />
+                  </label>
                 )}
               </div>
 

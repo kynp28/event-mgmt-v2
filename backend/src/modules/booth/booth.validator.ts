@@ -10,7 +10,7 @@ export const updateZoneSchema = createZoneSchema.partial();
 
 export const createBoothSchema = z.object({
   eventId: z.number().int().positive(),
-  zoneId: z.number().int().positive().optional(),
+  zoneId: z.number().int().positive().nullable().optional(),
   boothNo: z.string().min(1, 'ต้องระบุหมายเลขบูธ'),
   size: z.string().optional(),
   price: z.number().min(0, 'ราคาต้องไม่ติดลบ'),

@@ -19,5 +19,11 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'กรุณากรอกรหัสผ่าน'),
 });
 
+export const appealSchema = z.object({
+  email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง'),
+  reason: z.string().min(10, 'กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร'),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type AppealInput = z.infer<typeof appealSchema>;

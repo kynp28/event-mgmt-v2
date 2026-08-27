@@ -21,16 +21,25 @@ export class BookingService {
       throw new ConflictError('บูธนี้ไม่ได้อยู่ในอีเวนต์ที่ระบุ');
     }
 
-    if (booth.status !== 'available') {
-      throw new ConflictError('บูธนี้ไม่ว่าง (ถูกจองหรือประมูลไปแล้ว)');
+    if (booth.status !== 'available' || booth.lockState !== 'none') {
+      throw new ConflictError('บูธนี้ไม่ว่าง (ถูกจอง ประมูล หรือรอชำระเงิน)');
     }
 
     const event = await this.eventRepository.findEventById(eventId);
     if (!event) {
       throw new NotFoundError('ไม่พบอีเวนต์');
     }
-    if (event.eventStatus !== 'open') {
-      throw new ConflictError('ไม่สามารถจองได้ อีเวนต์นี้ยังไม่เปิดรับจองหรือปิดแล้ว');
+    if (new Date(event.endDate) < new Date() || event.eventStatus !== 'open') {
+      throw new ConflictError('ไม่สามารถจองได้ อีเวนต์นี้สิ้นสุดระยะเวลาจัดงานแล้วหรือปิดรับจอง');
+    }
+
+    // Guard: ป้องกันจองซ้ำ — ตรวจสอบว่า vendor มี booking ที่ active อยู่แล้วสำหรับบูธนี้หรือไม่
+    const existingBookings = await this.bookingRepository.findBookingsByVendor(vendorId);
+    const hasDuplicate = existingBookings.some(
+      (b: any) => b.boothId === boothId && (b.status === 'pending' || b.status === 'confirmed')
+    );
+    if (hasDuplicate) {
+      throw new ConflictError('คุณมีการจองที่ยังไม่เสร็จสมบูรณ์สำหรับบูธนี้อยู่แล้ว');
     }
 
     const totalAmount = Number(booth.price);
@@ -66,5 +75,9 @@ export class BookingService {
     }
 
     return this.bookingRepository.updateBookingStatusWithTransaction(bookingId, status, booking.boothId);
+  }
+
+  async confirmWaitlistBooking(userId: number, waitlistEntryId: number) {
+    return this.bookingRepository.confirmWaitlistBookingWithTransaction(userId, waitlistEntryId);
   }
 }

@@ -34,49 +34,71 @@ export const BrowseEvents: React.FC = () => {
     }
   };
 
-  const filteredEvents = (events || []).filter((event: any) => {
-    const name = event.eventName || '';
-    const loc = event.location || '';
-    const matchQuery = name.toLowerCase().includes(appliedSearch.query.toLowerCase());
-    const matchLocation = appliedSearch.location ? loc.toLowerCase().includes(appliedSearch.location.toLowerCase()) : true;
-    return matchQuery && matchLocation;
-  });
+  const filteredEvents = (events || [])
+    .filter((event: any) => {
+      const name = event.eventName || '';
+      const loc = event.location || '';
+      const matchQuery = name.toLowerCase().includes(appliedSearch.query.toLowerCase());
+      const matchLocation = appliedSearch.location ? loc.toLowerCase().includes(appliedSearch.location.toLowerCase()) : true;
+      return matchQuery && matchLocation;
+    })
+    .sort((a: any, b: any) => {
+      const aEnded = Boolean(a.isEnded || (a.endDate && new Date(a.endDate) < new Date()) || a.eventStatus === 'ended');
+      const bEnded = Boolean(b.isEnded || (b.endDate && new Date(b.endDate) < new Date()) || b.eventStatus === 'ended');
+      if (aEnded === bEnded) {
+        return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
+      }
+      return aEnded ? 1 : -1;
+    });
 
   return (
     <div style={{ backgroundColor: 'var(--bg-dark)', minHeight: 'calc(100vh - 64px)' }}>
       {/* Search Header */}
-      <div style={{ backgroundColor: '#FFFFFF', padding: '3rem 1.5rem', borderBottom: '1px solid var(--border)' }}>
-        <div className="container" style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: '2rem', color: 'var(--text-main)' }}>
+      <div style={{ 
+        background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-dark) 100%)', 
+        padding: '5rem 1.5rem', 
+        borderBottom: '1px solid var(--border)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Glow Effects */}
+        <div style={{ position: 'absolute', top: '-20%', left: '10%', width: '400px', height: '400px', background: 'var(--primary-glow)', filter: 'blur(120px)', borderRadius: '50%', opacity: 0.7 }}></div>
+        <div style={{ position: 'absolute', bottom: '-20%', right: '10%', width: '350px', height: '350px', background: 'rgba(59, 130, 246, 0.15)', filter: 'blur(100px)', borderRadius: '50%', opacity: 0.6 }}></div>
+        
+        <div className="container" style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 800, textAlign: 'center', marginBottom: '1rem', color: 'var(--text-main)', letterSpacing: '-0.03em' }}>
             ค้นหางานแฟร์ที่ใช่สำหรับคุณ
           </h1>
+          <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '1.125rem', marginBottom: '2.5rem' }}>
+            รวบรวมงานอีเวนต์ ตลาดนัด และพื้นที่ขายของที่เหมาะกับธุรกิจของคุณ
+          </p>
           
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#FFFFFF', padding: '0.5rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', padding: '0.75rem', borderRadius: '16px', boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', flex: 2, minWidth: '200px' }}>
-              <Search size={20} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
+              <Search size={22} color="var(--primary)" style={{ marginRight: '0.75rem' }} />
               <input 
                 type="text" 
                 placeholder="ค้นหางานแฟร์, ตลาดนัด..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem' }}
+                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.05rem', backgroundColor: 'transparent', color: 'var(--text-main)' }}
               />
             </div>
             <div style={{ width: '1px', backgroundColor: 'var(--border)', margin: '0.5rem 0' }}></div>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', flex: 1, minWidth: '150px' }}>
-              <MapPin size={20} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
+              <MapPin size={22} color="var(--primary)" style={{ marginRight: '0.75rem' }} />
               <select 
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-main)' }}
+                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.05rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-main)', appearance: 'none' }}
               >
-                <option value="">ทุกจังหวัด</option>
-                <option value="Bangkok">กรุงเทพฯ</option>
-                <option value="Buriram">บุรีรัมย์</option>
+                <option value="" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>ทุกจังหวัด</option>
+                <option value="Bangkok" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>กรุงเทพฯ</option>
+                <option value="Buriram" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>บุรีรัมย์</option>
                 {/* Could add more provinces dynamically here later */}
               </select>
             </div>
-            <button type="submit" style={{ backgroundColor: 'var(--primary)', color: 'white', border: 'none', padding: '0.75rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }}>
+            <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 2.5rem', borderRadius: '12px', fontWeight: 600, fontSize: '1.05rem' }}>
               ค้นหา
             </button>
           </form>
@@ -107,8 +129,8 @@ export const BrowseEvents: React.FC = () => {
               ))}
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div style={{ padding: '5rem 2rem', textAlign: 'center', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px dashed var(--border)' }}>
-              <Search size={64} color="var(--text-muted)" style={{ margin: '0 auto 1.5rem', opacity: 0.3 }} />
+            <div className="glass-card" style={{ padding: '5rem 2rem', textAlign: 'center', border: '1px dashed var(--border)' }}>
+              <Search size={64} color="var(--border)" style={{ margin: '0 auto 1.5rem', opacity: 0.5 }} />
               <h3 style={{ fontSize: '1.5rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>ไม่พบงานแฟร์ที่ตรงกับการค้นหา</h3>
               <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>ลองเปลี่ยนคำค้นหา หรือระบุสถานที่ใหม่ดูนะครับ</p>
               <button 
@@ -124,17 +146,25 @@ export const BrowseEvents: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {filteredEvents.map((event: any) => (
-                <div key={event.eventId} className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ height: '200px', backgroundColor: '#F1F5F9', position: 'relative' }}>
+              {filteredEvents.map((event: any) => {
+                const isEnded = Boolean(event.isEnded || (event.endDate && new Date(event.endDate) < new Date()) || event.eventStatus === 'ended');
+                return (
+                <div key={event.eventId} className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', opacity: isEnded ? 0.85 : 1 }}>
+                  <div style={{ height: '220px', backgroundColor: 'var(--bg-dark)', position: 'relative' }}>
                     <img 
                       src={getImageUrl(event.imageUrl)} 
                       alt={event.eventName} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', filter: isEnded ? 'grayscale(30%)' : 'none' }}
                       onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800'; }}
                     />
-                    <div style={{ position: 'absolute', top: '1rem', right: '1rem', backgroundColor: 'var(--bg-card)', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                      กำลังเปิดจอง
+                    <div style={{ 
+                      position: 'absolute', top: '1rem', right: '1rem', 
+                      backgroundColor: isEnded ? 'rgba(100, 116, 139, 0.9)' : 'rgba(16, 185, 129, 0.9)', 
+                      backdropFilter: 'blur(8px)', padding: '0.375rem 1rem', borderRadius: '9999px', 
+                      fontSize: '0.75rem', fontWeight: 700, color: 'white', 
+                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' 
+                    }}>
+                      {isEnded ? 'สิ้นสุดแล้ว (Ended)' : 'กำลังเปิดจอง'}
                     </div>
                   </div>
                   <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -166,7 +196,9 @@ export const BrowseEvents: React.FC = () => {
                         <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
                         <div style={{ textAlign: 'center', flex: 1 }}>
                           <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>ว่าง</div>
-                          <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{event.boothStats?.available ?? 0}</div>
+                          <div style={{ fontWeight: 700, color: isEnded ? 'var(--text-muted)' : 'var(--primary)' }}>
+                            {isEnded ? 0 : (event.boothStats?.available ?? 0)}
+                          </div>
                         </div>
                         <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
                         <div style={{ textAlign: 'center', flex: 1 }}>
@@ -177,15 +209,16 @@ export const BrowseEvents: React.FC = () => {
                       
                       <button 
                         onClick={() => navigate(`/events/${event.eventId}`)}
-                        className="btn btn-primary"
+                        className={`btn ${isEnded ? 'btn-secondary' : 'btn-primary'}`}
                         style={{ width: '100%', padding: '0.75rem 1.25rem', borderRadius: '8px', fontWeight: 600 }}
                       >
-                        ดูผังบูธ
+                        {isEnded ? 'ดูผังบูธ (สิ้นสุดแล้ว)' : 'ดูผังบูธ'}
                       </button>
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

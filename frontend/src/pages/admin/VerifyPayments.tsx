@@ -67,7 +67,7 @@ export const VerifyPayments: React.FC = () => {
                 </div>
               </div>
               
-              <div style={{ marginBottom: '1.5rem', backgroundColor: '#F8FAFC', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ marginBottom: '1.5rem', backgroundColor: 'var(--bg-card)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
                 <a href={p.slipImage} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
                   <img src={p.slipImage} alt="slip" style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', borderRadius: '4px', marginBottom: '0.5rem' }} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   <br/>

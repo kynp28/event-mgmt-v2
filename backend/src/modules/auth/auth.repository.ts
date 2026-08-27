@@ -16,6 +16,13 @@ export class AuthRepository {
     });
   }
 
+  async updateUser(userId: number, data: { username?: string; avatarUrl?: string | null; passwordHash?: string }): Promise<User> {
+    return prisma.user.update({
+      where: { userId },
+      data,
+    });
+  }
+
   async createUser(data: {
     username: string;
     email: string;
@@ -47,5 +54,22 @@ export class AuthRepository {
       include: { role: true },
     });
     return userRoles.map((ur) => ur.role.roleName);
+  }
+
+  async findPendingAppeal(userId: number) {
+    return prisma.accountAppeal.findFirst({
+      where: { userId, status: 'pending' },
+    });
+  }
+
+  async createAppeal(userId: number, reason: string, evidenceUrl?: string) {
+    return prisma.accountAppeal.create({
+      data: {
+        userId,
+        reason,
+        evidenceUrl,
+        status: 'pending',
+      },
+    });
   }
 }

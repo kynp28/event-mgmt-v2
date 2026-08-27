@@ -39,9 +39,19 @@ export class PaymentController {
     const isAdmin = req.user!.roles.includes('admin');
     const paymentId = parseInt(req.params.id as string, 10);
     if (isNaN(paymentId)) throw new ValidationError('Invalid payment ID');
-    const status = req.body.status as PaymentStatus;
+    const { status, reason, action } = req.body;
 
-    const result = await this.paymentService.verifyPayment(paymentId, status, userId, isAdmin);
-    res.status(200).json({ message: `เปลี่ยนสถานะเป็น ${status} สำเร็จ`, data: result });
+    const result = await this.paymentService.verifyPayment(
+      paymentId, 
+      status as PaymentStatus, 
+      userId, 
+      isAdmin, 
+      { reason, action }
+    );
+    res.status(200).json({ 
+      success: true, 
+      message: status === 'verified' ? 'อนุมัติสลิปชำระเงินเรียบร้อยแล้ว' : 'ปฏิเสธสลิปชำระเงินเรียบร้อยแล้ว', 
+      data: result 
+    });
   };
 }

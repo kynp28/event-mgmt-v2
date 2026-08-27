@@ -37,6 +37,18 @@ export const ManageEvents: React.FC = () => {
     }
   };
 
+  const updateStatus = useMutation({
+    mutationFn: async ({ eventId, status }: { eventId: number; status: string }) => {
+      await api.patch(`/events/${eventId}`, { eventStatus: status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myEvents'] });
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.message || 'ไม่สามารถอัปเดตสถานะได้');
+    }
+  });
+
   return (
     <div style={{ backgroundColor: 'var(--bg-dark)', minHeight: 'calc(100vh - 80px)', padding: '2rem 1.5rem' }}>
       <div className="container animate-fade-in" style={{ maxWidth: '1000px', padding: 0 }}>
@@ -77,31 +89,50 @@ export const ManageEvents: React.FC = () => {
                   <tr key={event.eventId} style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.2s' }}>
                     <td style={{ padding: '1.25rem 1.5rem' }}>
                       <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>{event.eventName}</div>
-                      <div style={{ 
-                        display: 'inline-block', 
-                        padding: '0.125rem 0.5rem', 
-                        borderRadius: '9999px', 
-                        fontSize: '0.75rem', 
-                        fontWeight: 500, 
-                        backgroundColor: 
-                          event.eventStatus === 'open' ? 'rgba(34, 197, 94, 0.1)' : 
-                          event.eventStatus === 'closed' ? 'rgba(239, 68, 68, 0.1)' : 
-                          event.eventStatus === 'ended' ? 'rgba(100, 116, 139, 0.1)' :
-                          event.eventStatus === 'cancelled' ? 'rgba(239, 68, 68, 0.15)' :
-                          'rgba(245, 158, 11, 0.1)', 
-                        color: 
-                          event.eventStatus === 'open' ? 'var(--success)' : 
-                          event.eventStatus === 'closed' ? 'var(--danger)' : 
-                          event.eventStatus === 'ended' ? 'var(--text-muted)' :
-                          event.eventStatus === 'cancelled' ? 'var(--danger)' :
-                          'var(--warning)' 
-                      }}>
-                        {event.eventStatus === 'open' ? 'เปิดรับจอง' : 
-                         event.eventStatus === 'closed' ? 'ปิดรับจอง' : 
-                         event.eventStatus === 'ended' ? 'สิ้นสุดแล้ว' :
-                         event.eventStatus === 'cancelled' ? 'ยกเลิก' :
-                         'ฉบับร่าง'}
-                      </div>
+                      {(() => {
+                        const isEnded = event.endDate && new Date(event.endDate) < new Date();
+                        const displayStatus = (isEnded || event.eventStatus === 'ended') ? 'ended' : event.eventStatus;
+                        
+                        return (
+                          <select
+                            value={displayStatus}
+                            onChange={(e) => updateStatus.mutate({ eventId: event.eventId, status: e.target.value })}
+                            disabled={updateStatus.isPending || isEnded}
+                            style={{ 
+                              display: 'inline-block',
+                              padding: '0.25rem 1.75rem 0.25rem 0.75rem', 
+                              borderRadius: '9999px', 
+                              fontSize: '0.75rem', 
+                              fontWeight: 600, 
+                              backgroundColor: 
+                                displayStatus === 'open' ? 'rgba(16, 185, 129, 0.15)' : 
+                                displayStatus === 'closed' ? 'rgba(239, 68, 68, 0.15)' : 
+                                displayStatus === 'ended' ? 'rgba(148, 163, 184, 0.15)' :
+                                displayStatus === 'cancelled' ? 'rgba(239, 68, 68, 0.2)' :
+                                'rgba(245, 158, 11, 0.15)', 
+                              color: 
+                                displayStatus === 'open' ? 'var(--success)' : 
+                                displayStatus === 'closed' ? 'var(--danger)' : 
+                                displayStatus === 'ended' ? 'var(--text-muted)' :
+                                displayStatus === 'cancelled' ? 'var(--danger)' :
+                                'var(--warning)',
+                              border: '1px solid currentColor',
+                              outline: 'none',
+                              appearance: 'none',
+                              cursor: isEnded ? 'not-allowed' : 'pointer',
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 0.375rem center'
+                        }}
+                      >
+                        <option value="draft" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>ฉบับร่าง</option>
+                        <option value="open" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>เปิดรับจอง</option>
+                        <option value="closed" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>ปิดรับจอง</option>
+                        <option value="ended" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>สิ้นสุดแล้ว</option>
+                        <option value="cancelled" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>ยกเลิก</option>
+                      </select>
+                        );
+                      })()}
                     </td>
                     <td style={{ padding: '1.25rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>

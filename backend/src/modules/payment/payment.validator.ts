@@ -7,4 +7,6 @@ export const submitPaymentSchema = z.object({
 
 export const verifyPaymentSchema = z.object({
   status: z.enum(['verified', 'rejected']),
+  reason: z.string().optional(),
+  action: z.enum(['request_reupload', 'cancel_booking']).optional(),
 });

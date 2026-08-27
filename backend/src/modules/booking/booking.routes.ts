@@ -43,4 +43,12 @@ router.patch(
   asyncHandler(controller.updateBookingStatus)
 );
 
+// (Vendor) ยืนยันสิทธิ์จากคิวสำรอง
+router.post(
+  '/confirm-waitlist',
+  authenticate,
+  requirePermission('book_booth'),
+  asyncHandler(controller.confirmWaitlist)
+);
+
 export default router;

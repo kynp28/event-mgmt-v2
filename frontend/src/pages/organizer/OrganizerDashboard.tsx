@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Store, Ticket, CircleDollarSign, Plus, Map, TrendingUp, ChevronRight, Activity } from 'lucide-react';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { EventCalendar } from '../../components/Calendar/EventCalendar';
 
 export const OrganizerDashboard = () => {
   const { t } = useTranslation();
@@ -45,7 +46,7 @@ export const OrganizerDashboard = () => {
         </div>
         
         {/* KPI Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ marginBottom: '3rem' }}>
           {/* Card 1 */}
           <Link to="/organizer/events" className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none', cursor: 'pointer' }}>
             <div style={{ backgroundColor: '#EFF6FF', padding: '1rem', borderRadius: '12px', color: '#3B82F6' }}>
@@ -89,6 +90,23 @@ export const OrganizerDashboard = () => {
               <p style={{ color: 'var(--text-main)', fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>฿{stats.totalRevenue?.toLocaleString()}</p>
             </div>
           </div>
+        </div>
+
+        {/* Calendar Section */}
+        <div className="glass-card" style={{ padding: '2rem', marginBottom: '3rem' }}>
+          <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Calendar size={20} color="var(--primary)" /> ปฏิทินงานแฟร์ของฉัน
+          </h3>
+          <EventCalendar 
+            events={(stats.upcomingEvents || []).map((e: any) => ({
+              id: e.eventId,
+              title: e.eventName,
+              start: new Date(e.startDate),
+              end: new Date(e.endDate),
+              status: ['open', 'closed'].includes(e.eventStatus) ? 'approved' : 'pending', // open/closed = primary, draft/ended/cancelled = gray
+              resource: { subtitle: e.location || 'สถานที่จัดงาน' }
+            }))}
+          />
         </div>
 
         {/* Quick Actions & Recent Activity Area */}

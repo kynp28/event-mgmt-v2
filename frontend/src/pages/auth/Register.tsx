@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sparkles, X } from 'lucide-react';
-import api from '../services/api';
-import { AuthLayout } from '../components/AuthLayout';
+import api from '../../services/api';
+import { AuthLayout } from '../../components/AuthLayout';
 import { useTranslation } from 'react-i18next';
 
 export const Register: React.FC = () => {
@@ -134,33 +134,33 @@ export const Register: React.FC = () => {
       {/* Terms and Conditions Modal */}
       {showTerms && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <button 
               onClick={() => setShowTerms(false)}
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
             >
               <X size={24} />
             </button>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>{t('terms_of_use')}</h2>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-main)' }}>{t('terms_of_use')}</h2>
             
-            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '1rem', color: '#334155', fontSize: '0.9rem', lineHeight: '1.6' }}>
-              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: '#1e293b' }}>{t('terms_title_1')}</h3>
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{t('terms_title_1')}</h3>
               <p>{t('terms_desc_1')}</p>
               
-              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: '#1e293b' }}>{t('terms_title_2')}</h3>
+              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{t('terms_title_2')}</h3>
               <p>{t('terms_desc_2')}</p>
               
-              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: '#1e293b' }}>{t('terms_title_3')}</h3>
+              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{t('terms_title_3')}</h3>
               <p>{t('terms_desc_3')}</p>
               
-              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: '#1e293b' }}>{t('terms_title_4')}</h3>
+              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{t('terms_title_4')}</h3>
               <p>{t('terms_desc_4')}</p>
               
-              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: '#1e293b' }}>{t('terms_title_5')}</h3>
+              <h3 style={{ fontWeight: 600, marginTop: '1rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{t('terms_title_5')}</h3>
               <p>{t('terms_desc_5')}</p>
             </div>
             
-            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e2e8f0', textAlign: 'center' }}>
+            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
               <button 
                 onClick={() => {
                   setShowTerms(false);

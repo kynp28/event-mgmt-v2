@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Calendar, MapPin, X, Image as ImageIcon, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, MapPin, X, Image as ImageIcon, Users, ChevronLeft, ChevronRight, FileText, Upload } from 'lucide-react';
 import api from '../../services/api';
 
 export const EditEvent: React.FC = () => {
@@ -14,6 +14,8 @@ export const EditEvent: React.FC = () => {
   const [location, setLocation] = useState('');
   const [eventStatus, setEventStatus] = useState('draft');
   const [images, setImages] = useState<string[]>([]);
+  const [invoiceUrl, setInvoiceUrl] = useState<string>('');
+  const [invoiceFileName, setInvoiceFileName] = useState<string>('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -39,9 +41,14 @@ export const EditEvent: React.FC = () => {
 
         setStartDate(formatForInput(event.startDate));
         setEndDate(formatForInput(event.endDate));
-        setLocation(event.location);
+        setLocation(event.location || '');
         setEventStatus(event.eventStatus);
         
+        if (event.invoiceUrl) {
+          setInvoiceUrl(event.invoiceUrl);
+          setInvoiceFileName('ไฟล์ใบแจ้งหนี้ที่มีอยู่');
+        }
+
         if (event.imageUrl) {
           try {
             const parsed = JSON.parse(event.imageUrl);
@@ -62,6 +69,24 @@ export const EditEvent: React.FC = () => {
     };
     if (id) fetchEvent();
   }, [id]);
+
+  const handleInvoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('ไฟล์ใบแจ้งหนี้ต้องมีขนาดไม่เกิน 10MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setInvoiceUrl(reader.result as string);
+      setInvoiceFileName(file.name);
+      setError('');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -126,6 +151,7 @@ export const EditEvent: React.FC = () => {
         location,
         eventStatus,
         imageUrl: images.length > 0 ? JSON.stringify(images) : null,
+        invoiceUrl: invoiceUrl || null,
       });
       queryClient.invalidateQueries({ queryKey: ['myEvents'] });
       queryClient.invalidateQueries({ queryKey: ['adminEvents'] });
@@ -185,6 +211,53 @@ export const EditEvent: React.FC = () => {
                     </div>
                     <input type="file" multiple style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} accept="image/*" onChange={handleImageUpload} />
                   </div>
+                )}
+              </div>
+
+              {/* Invoice Upload Section */}
+              <div style={{ marginBottom: '1.25rem', padding: '1.25rem', backgroundColor: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileText size={18} color="var(--primary)" /> ใบแจ้งหนี้ / ใบเสร็จรับเงินประจำอีเวนต์ (Invoice/Receipt)
+                  </label>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>JPG, PNG, PDF (≤10MB)</span>
+                </div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  ไฟล์นี้จะแสดงเมื่อผู้เช่าบูธกด "ดูใบแจ้งหนี้" ในรายการจองของตนเอง
+                </p>
+
+                {invoiceUrl ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+                      {invoiceUrl.startsWith('data:application/pdf') || invoiceUrl.endsWith('.pdf') ? (
+                        <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#ef4444', color: 'white', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          PDF
+                        </div>
+                      ) : (
+                        <img src={invoiceUrl} alt="Invoice preview" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px' }} />
+                      )}
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)' }}>
+                          {invoiceFileName || 'ไฟล์ใบแจ้งหนี้ประจำงาน'}
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>✓ พร้อมแสดงในหน้า Invoice</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setInvoiceUrl(''); setInvoiceFileName(''); }}
+                      style={{ padding: '0.35rem 0.65rem', border: '1px solid rgba(239, 68, 68, 0.3)', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      <X size={14} /> ลบไฟล์
+                    </button>
+                  </div>
+                ) : (
+                  <label style={{ border: '2px dashed var(--border)', borderRadius: '6px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--bg-card)', transition: 'border-color 0.2s' }}>
+                    <Upload size={20} color="var(--primary)" style={{ marginBottom: '0.25rem' }} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>คลิกเพื่ออัปโหลดใบแจ้งหนี้ / ใบเสร็จ</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>รองรับไฟล์รูปภาพ JPG, PNG หรือไฟล์เอกสาร PDF</span>
+                    <input type="file" accept="image/*,application/pdf" onChange={handleInvoiceUpload} style={{ display: 'none' }} />
+                  </label>
                 )}
               </div>
 

@@ -32,12 +32,20 @@ export default function AdminEvents() {
     }
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (event: EventData) => {
+    const isEnded = event.endDate && new Date(event.endDate) < new Date();
+    
+    if (isEnded || event.eventStatus === 'ended') {
+      return <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#F3F4F6', color: '#6B7280', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>{t('ended', 'จบแล้ว')}</span>;
+    }
+
+    switch (event.eventStatus) {
       case 'open':
         return <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#DCFCE7', color: '#16A34A', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>{t('open', 'เปิดรับจอง')}</span>;
       case 'closed':
         return <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>{t('closed', 'ปิดรับจอง')}</span>;
+      case 'cancelled':
+        return <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>{t('cancelled', 'ยกเลิก')}</span>;
       case 'draft':
       default:
         return <span style={{ padding: '0.25rem 0.75rem', backgroundColor: '#F3F4F6', color: '#374151', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600 }}>{t('draft', 'ฉบับร่าง')}</span>;
@@ -92,7 +100,7 @@ export default function AdminEvents() {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{event.organizer.email}</div>
                   </td>
                   <td style={{ padding: '1rem' }}>
-                    {getStatusBadge(event.eventStatus)}
+                    {getStatusBadge(event)}
                   </td>
                   <td style={{ padding: '1rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>

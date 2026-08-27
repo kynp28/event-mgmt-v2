@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { LogOut, User, Sparkles, Globe, Menu, X } from 'lucide-react';
+import { LogOut, User, Sparkles, Globe, Menu, X, Moon, Sun } from 'lucide-react';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -10,6 +10,22 @@ export const Navbar = () => {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) return saved;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+    return 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   if (location.pathname === '/login' || location.pathname === '/register') {
     return null;
@@ -35,7 +51,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="auth-navbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottom: '1px solid var(--border)', padding: '1rem 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
+    <nav className="auth-navbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border)', padding: '1rem 2rem', position: 'sticky', top: 0, zIndex: 50 }}>
       
       {/* Mobile Top Bar */}
       <div className="nav-mobile-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flex: 1 }}>
@@ -62,10 +78,36 @@ export const Navbar = () => {
       {/* Navigation Content */}
       <div className={`nav-content-wrapper ${isMenuOpen ? 'open' : ''}`} style={{ flex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="auth-nav-links" style={{ display: 'flex', gap: '2rem', whiteSpace: 'nowrap', flex: 1, justifyContent: 'center' }}>
-          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-main)', textDecoration: 'none', fontWeight: 600 }}>{t('home')}</Link>
-          <Link to="/#events-section" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('active_events')}</Link>
-          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('pricing')}</Link>
-          <Link to="/" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}>{t('about')}</Link>
+          <Link 
+            to="/" 
+            className="nav-item" 
+            onClick={(e) => {
+              setIsMenuOpen(false);
+              if (location.pathname === '/') {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                window.history.pushState(null, '', '/');
+              }
+            }} 
+            style={{ color: 'var(--text-main)', textDecoration: 'none', fontWeight: 600 }}
+          >
+            {t('home')}
+          </Link>
+          <a 
+            href="/#events-section" 
+            className="nav-item" 
+            onClick={(e) => {
+              setIsMenuOpen(false);
+              if (location.pathname === '/') {
+                e.preventDefault();
+                document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
+                window.history.pushState(null, '', '/#events-section');
+              }
+            }} 
+            style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 500 }}
+          >
+            {t('active_events')}
+          </a>
         </div>
 
         <div className="nav-actions-wrapper flex gap-4 items-center" style={{ whiteSpace: 'nowrap', flex: 1, justifyContent: 'flex-end' }}>
@@ -75,11 +117,20 @@ export const Navbar = () => {
               {user?.roles.includes('organizer') && <Link to="/organizer" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('organizer_dashboard')}</Link>}
               {user?.roles.includes('vendor') && <Link to="/vendor" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('my_bookings')}</Link>}
               
-              <div className="user-profile-wrapper flex items-center gap-4" style={{ marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid var(--border)' }}>
-                <span className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-main)' }}>
-                  <User size={16} color="var(--primary)"/> {getRoleDisplayName(user?.roles[0] || '')}
-                </span>
-                <button onClick={handleLogout} className="btn btn-secondary flex items-center gap-2" title="ออกจากระบบ" style={{ backgroundColor: 'transparent', border: 'none', color: 'var(--text-muted)' }}>
+              <div className="user-profile-wrapper flex items-center gap-3" style={{ marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid var(--border)' }}>
+                <Link to="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'var(--text-main)' }}>
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, overflow: 'hidden' }}>
+                    {user?.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.username || 'User'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      user?.username?.charAt(0).toUpperCase() || 'U'
+                    )}
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
+                    {user?.username || getRoleDisplayName(user?.roles[0] || '')}
+                  </span>
+                </Link>
+                <button onClick={handleLogout} className="btn btn-secondary flex items-center" title="ออกจากระบบ" style={{ backgroundColor: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '0.25rem' }}>
                   <LogOut size={16} />
                 </button>
               </div>
@@ -91,11 +142,22 @@ export const Navbar = () => {
             </div>
           )}
 
-          <div style={{ marginLeft: '0.5rem', paddingLeft: '1rem', borderLeft: '1px solid var(--border)', display: 'flex' }}>
+          <div style={{ marginLeft: '0.5rem', paddingLeft: '1rem', borderLeft: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+            <button 
+              onClick={toggleTheme} 
+              style={{ 
+                display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-card-hover)', 
+                border: '1px solid var(--border)', padding: '0.5rem', borderRadius: '50%',
+                color: 'var(--text-main)', cursor: 'pointer', width: '36px', height: '36px'
+              }}
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? <Moon size={18} color="var(--primary)" /> : <Sun size={18} color="var(--warning)" />}
+            </button>
             <button 
               onClick={toggleLanguage} 
               style={{ 
-                display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#F8FAFC', 
+                display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'var(--bg-card-hover)', 
                 border: '1px solid var(--border)', padding: '0.5rem 0.75rem', borderRadius: '9999px',
                 color: 'var(--text-main)', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600
               }}

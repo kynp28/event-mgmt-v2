@@ -82,6 +82,49 @@ async function main() {
     }
   }
   console.log('✅ Role-Permission mappings seeded');
+
+  // Seed Users
+  const passwordHash = await import('argon2').then(argon2 => argon2.hash('123456'));
+  
+  const testUsers = [
+    { email: 'admin@test.com', username: 'Admin Tester', roleName: 'admin' },
+    { email: 'organizer@test.com', username: 'Organizer Tester', roleName: 'organizer' },
+    { email: 'vendor@test.com', username: 'Vendor Tester', roleName: 'vendor' },
+  ];
+
+  for (const tu of testUsers) {
+    const user = await prisma.user.upsert({
+      where: { email: tu.email },
+      update: { passwordHash },
+      create: {
+        email: tu.email,
+        username: tu.username,
+        passwordHash,
+      }
+    });
+
+    // Check if user already has this role
+    const existingRole = await prisma.userRole.findUnique({
+      where: {
+        userId_roleId: {
+          userId: user.userId,
+          roleId: roleMap[tu.roleName]!
+        }
+      }
+    });
+
+    if (!existingRole) {
+      await prisma.userRole.create({
+        data: {
+          userId: user.userId,
+          roleId: roleMap[tu.roleName]!
+        }
+      });
+    }
+  }
+  console.log('✅ Test users seeded with password "123456":');
+  testUsers.forEach(u => console.log(`   - ${u.email} (${u.roleName})`));
+
   console.log('🎉 Seed complete!');
 }
 

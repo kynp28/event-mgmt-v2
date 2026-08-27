@@ -10,6 +10,7 @@ export class EventService {
     description?: string;
     location?: string;
     imageUrl?: string;
+    invoiceUrl?: string;
     startDate: string;
     endDate: string;
   }) {
@@ -23,34 +24,44 @@ export class EventService {
       description: input.description,
       location: input.location,
       imageUrl: input.imageUrl,
+      invoiceUrl: input.invoiceUrl,
       startDate: new Date(input.startDate),
       endDate: new Date(input.endDate),
     });
   }
 
   private mapBoothStats(event: any) {
-    if (!event.booths) return event;
-    const total = event.booths.length;
-    const available = event.booths.filter((b: any) => b.status === 'available').length;
-    const booked = event.booths.filter((b: any) => b.status === 'booked').length;
+    if (!event) return event;
+    const now = new Date();
+    const isEnded = new Date(event.endDate) < now;
+    let dynamicStatus = event.eventStatus;
+    if (isEnded && (event.eventStatus === 'open' || event.eventStatus === 'closed')) {
+      dynamicStatus = 'ended';
+    }
+
+    const total = event.booths ? event.booths.length : 0;
+    const available = isEnded ? 0 : (event.booths ? event.booths.filter((b: any) => b.status === 'available' && b.lockState === 'none').length : 0);
+    const booked = event.booths ? event.booths.filter((b: any) => b.status === 'booked').length : 0;
     
     const { booths, ...rest } = event;
     return {
       ...rest,
+      eventStatus: dynamicStatus,
+      isEnded,
       boothStats: { total, available, booked }
     };
   }
 
   async getEventsByOrganizer(organizerId: number, skip: number = 0, take: number = 50) {
     const events = await this.eventRepository.findEvents({ organizerId }, skip, take);
-    return events.map(this.mapBoothStats);
+    return events.map((e) => this.mapBoothStats(e));
   }
 
   async getActiveEvents(skip: number = 0, take: number = 50) {
     const events = await this.eventRepository.findEvents({
-      eventStatus: { in: ['open', 'closed'] },
+      eventStatus: { in: ['open', 'closed', 'ended'] },
     }, skip, take);
-    return events.map(this.mapBoothStats);
+    return events.map((e) => this.mapBoothStats(e));
   }
 
   async getEventById(eventId: number) {
@@ -58,7 +69,16 @@ export class EventService {
     if (!event) {
       throw new NotFoundError('ไม่พบอีเวนต์');
     }
-    return event;
+    const isEnded = new Date(event.endDate) < new Date();
+    let dynamicStatus = event.eventStatus;
+    if (isEnded && (event.eventStatus === 'open' || event.eventStatus === 'closed')) {
+      dynamicStatus = 'ended';
+    }
+    return {
+      ...event,
+      eventStatus: dynamicStatus,
+      isEnded
+    };
   }
 
   async updateEvent(
@@ -68,7 +88,8 @@ export class EventService {
       eventName?: string;
       description?: string;
       location?: string;
-      imageUrl?: string;
+      imageUrl?: string | null;
+      invoiceUrl?: string | null;
       startDate?: string;
       endDate?: string;
       eventStatus?: EventStatus;
@@ -93,6 +114,7 @@ export class EventService {
     if (input.description !== undefined) updateData.description = input.description;
     if (input.location !== undefined) updateData.location = input.location;
     if (input.imageUrl !== undefined) updateData.imageUrl = input.imageUrl;
+    if (input.invoiceUrl !== undefined) updateData.invoiceUrl = input.invoiceUrl;
     if (input.startDate !== undefined) updateData.startDate = newStartDate;
     if (input.endDate !== undefined) updateData.endDate = newEndDate;
     if (input.eventStatus !== undefined) updateData.eventStatus = input.eventStatus;

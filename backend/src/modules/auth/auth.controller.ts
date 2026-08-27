@@ -18,4 +18,23 @@ export class AuthController {
     const result = await this.authService.login(input);
     res.status(200).json({ success: true, message: 'เข้าสู่ระบบสำเร็จ', data: result });
   };
+
+  getMe = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.userId;
+    const result = await this.authService.getMe(userId);
+    res.status(200).json({ success: true, data: result });
+  };
+
+  updateProfile = async (req: Request, res: Response): Promise<void> => {
+    const userId = req.user!.userId;
+    const result = await this.authService.updateProfile(userId, req.body);
+    res.status(200).json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ', data: result });
+  };
+
+  submitAppeal = async (req: Request, res: Response): Promise<void> => {
+    const { email, reason } = req.body;
+    const evidenceUrl = req.file ? `/uploads/appeals/${req.file.filename}` : undefined;
+    await this.authService.submitAppeal(email, reason, evidenceUrl);
+    res.status(201).json({ success: true, message: 'ส่งคำร้องขอปลดแบนเรียบร้อยแล้ว' });
+  };
 }

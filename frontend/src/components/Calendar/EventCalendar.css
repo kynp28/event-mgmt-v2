@@ -1,0 +1,150 @@
+.custom-calendar-wrapper .rbc-calendar {
+  background-color: var(--bg-card);
+  border-radius: 16px;
+  border: none;
+  color: var(--text-main);
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-month-view,
+.custom-calendar-wrapper.eventio-theme .rbc-time-view,
+.custom-calendar-wrapper.eventio-theme .rbc-agenda-view {
+  border: none;
+  background: white;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-header {
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 1rem 0;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-day-bg + .rbc-day-bg,
+.custom-calendar-wrapper.eventio-theme .rbc-month-row + .rbc-month-row {
+  border-color: #f8fafc;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-time-header-content {
+  border-left: 1px solid #f8fafc;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-time-content {
+  border-top: none;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-time-slot {
+  border-color: #f8fafc;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-timeslot-group {
+  border-bottom: 1px solid #f8fafc;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-time-column {
+  border-color: #f8fafc;
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-today {
+  background-color: rgba(241, 245, 249, 0.4);
+}
+
+.custom-calendar-wrapper.eventio-theme .rbc-event {
+  outline: none !important;
+}
+
+/* Eventio Custom Toolbar */
+.eventio-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.eventio-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.eventio-toolbar-label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text-main);
+}
+
+.eventio-toolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon-btn {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: #f8fafc;
+  color: var(--text-main);
+  border-color: #cbd5e1;
+}
+
+.today-btn {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0 1rem;
+  height: 32px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.today-btn:hover {
+  background: #f8fafc;
+  color: var(--text-main);
+}
+
+.view-pill-container {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 9999px;
+}
+
+.view-pill-btn {
+  background: none;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-pill-btn:hover {
+  color: var(--text-main);
+}
+
+.view-pill-btn.active {
+  background: #0f172a;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

@@ -27,9 +27,20 @@ export class WaitlistService {
       where: { eventId },
       include: {
         vendor: { select: { username: true, email: true } },
-        booth: { select: { boothNo: true } }
+        booth: { select: { boothNo: true, price: true } }
       },
       orderBy: { createdAt: 'asc' }
+    });
+  }
+
+  async getMyWaitlist(vendorId: number) {
+    return prisma.waitlist.findMany({
+      where: { vendorId },
+      include: {
+        event: { select: { eventName: true, startDate: true, endDate: true } },
+        booth: { select: { boothNo: true, price: true, lockState: true, lockedUntil: true } }
+      },
+      orderBy: { createdAt: 'desc' }
     });
   }
 }

@@ -12,6 +12,7 @@ const mockUser = (overrides: Partial<User> = {}): User => ({
   username: 'testuser',
   email: 'test@test.com',
   passwordHash: 'hashed',
+  avatarUrl: null,
   status: 'active',
   createdAt: new Date(),
   updatedAt: new Date(),

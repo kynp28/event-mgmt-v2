@@ -10,6 +10,7 @@ const router = Router();
 const controller = new WaitlistController();
 
 router.post('/', authenticate, requirePermission('book_booth'), validateBody(joinWaitlistSchema), asyncHandler(controller.joinWaitlist));
+router.get('/my', authenticate, requirePermission('book_booth'), asyncHandler(controller.getMyWaitlist));
 router.get('/events/:eventId', authenticate, requirePermission('create_event'), asyncHandler(controller.getWaitlistByEvent));
 
 export default router;

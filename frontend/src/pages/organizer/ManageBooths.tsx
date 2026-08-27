@@ -43,12 +43,13 @@ const DraggableBooth = ({ booth, onStop, onClick, setHoveredBooth }: any) => {
           position: 'absolute', 
           width: `${booth.width || 80}px`, 
           height: `${booth.height || 60}px`, 
-          backgroundColor: booth.status === 'booked' ? '#fed7aa' : (booth.zone?.color ? `${booth.zone.color}33` : '#bfdbfe'),
-          borderRadius: '4px',
-          color: booth.status === 'booked' ? '#9a3412' : (booth.zone?.color || '#1e3a8a'),
+          backgroundColor: booth.status === 'booked' ? 'rgba(249, 115, 22, 0.15)' : (booth.zone?.color ? `${booth.zone.color}20` : 'rgba(59, 130, 246, 0.15)'),
+          borderRadius: '6px',
+          color: booth.status === 'booked' ? '#fb923c' : (booth.zone?.color || '#60a5fa'),
           border: '1px solid',
-          borderColor: booth.status === 'booked' ? '#fdba74' : (booth.zone?.color || '#93c5fd'),
-          boxShadow: 'none'
+          borderColor: booth.status === 'booked' ? 'rgba(249, 115, 22, 0.4)' : (booth.zone?.color ? `${booth.zone.color}80` : 'rgba(59, 130, 246, 0.4)'),
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          backdropFilter: 'blur(4px)'
         }}
       >
         <span className="truncate w-full px-1 text-center leading-tight">{booth.boothNo}</span>
@@ -122,6 +123,9 @@ export const ManageBooths: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eventBooths', selectedEventId] });
       setEditingBooth(null);
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
     }
   });
 
@@ -178,7 +182,7 @@ export const ManageBooths: React.FC = () => {
   });
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 80px)', width: '100%', backgroundColor: 'var(--bg-dark)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: 'calc(100vh - 3rem)', width: '100%', backgroundColor: 'var(--bg-dark)', overflow: 'hidden', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
       
       {/* Left Sidebar: Tools & Zones */}
       <div style={{ width: '288px', backgroundColor: 'var(--bg-card)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 10 }}>
@@ -283,12 +287,12 @@ export const ManageBooths: React.FC = () => {
         {/* Canvas Toolbar / Legend */}
         {selectedEventId && (
           <div style={{ position: 'absolute', top: '1rem', left: '1rem', zIndex: 10, display: 'flex', gap: '0.5rem' }}>
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(4px)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', border: '1px solid var(--border)', padding: '0.375rem 0.75rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.75rem' }}>
+            <div style={{ backgroundColor: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid var(--glass-border)', padding: '0.5rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
               <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Legend:</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '12px', height: '12px', borderRadius: '2px', backgroundColor: '#bfdbfe', border: '1px solid #93c5fd' }}></div><span style={{ color: 'var(--text-muted)' }}>บูธว่าง</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '12px', height: '12px', borderRadius: '2px', backgroundColor: '#fed7aa', border: '1px solid #fdba74' }}></div><span style={{ color: 'var(--text-muted)' }}>ถูกจอง</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)' }}></div><span style={{ color: 'var(--text-muted)' }}>บูธว่าง</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: 'rgba(249, 115, 22, 0.15)', border: '1px solid rgba(249, 115, 22, 0.4)' }}></div><span style={{ color: 'var(--text-muted)' }}>ถูกจอง</span></div>
               {zones?.slice(0, 3).map((z: any) => (
-                <div key={z.zoneId} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '12px', height: '12px', borderRadius: '2px', border: `1px solid ${z.color}`, backgroundColor: `${z.color}33` }}></div><span style={{ color: 'var(--text-muted)' }}>{z.zoneName}</span></div>
+                <div key={z.zoneId} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '14px', height: '14px', borderRadius: '4px', border: `1px solid ${z.color}80`, backgroundColor: `${z.color}20` }}></div><span style={{ color: 'var(--text-muted)' }}>{z.zoneName}</span></div>
               ))}
               {zones && zones.length > 3 && <span style={{ color: 'var(--text-muted)' }}>+{zones.length - 3}</span>}
             </div>
@@ -297,7 +301,7 @@ export const ManageBooths: React.FC = () => {
 
         <div 
           style={{ 
-            flex: 1, width: '100%', height: '100%', overflow: 'auto', backgroundColor: '#ffffff',
+            flex: 1, width: '100%', height: '100%', overflow: 'auto', backgroundColor: 'var(--bg-card)',
             backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)', 
             backgroundSize: '20px 20px',
             backgroundPosition: '0 0'
@@ -328,7 +332,7 @@ export const ManageBooths: React.FC = () => {
                     position: 'absolute',
                     top: Math.max(0, (hoveredBooth.posY || 0) - 10),
                     left: (hoveredBooth.posX || 0) + (hoveredBooth.width || 80) + 15,
-                    backgroundColor: 'white',
+                    backgroundColor: 'var(--bg-card)',
                     padding: '1rem',
                     borderRadius: '8px',
                     boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
@@ -383,15 +387,14 @@ export const ManageBooths: React.FC = () => {
         {editingBooth ? (
           <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             
-            {/* Selected Indicator */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem', backgroundColor: 'var(--bg-dark)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', backgroundColor: 'var(--bg-dark)', border: '1px solid var(--border)', borderRadius: '12px' }}>
               <div style={{ 
-                width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.875rem',
-                backgroundColor: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color ? `${zones.find((z:any)=>z.zoneId === editingBooth.zoneId).color}33` : '#bfdbfe',
-                borderColor: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color || '#93c5fd',
+                width: '40px', height: '40px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.875rem',
+                backgroundColor: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color ? `${zones.find((z:any)=>z.zoneId === editingBooth.zoneId).color}20` : 'rgba(59, 130, 246, 0.15)',
+                borderColor: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color ? `${zones.find((z:any)=>z.zoneId === editingBooth.zoneId).color}80` : 'rgba(59, 130, 246, 0.4)',
                 borderWidth: '1px',
                 borderStyle: 'solid',
-                color: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color || '#1e3a8a'
+                color: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color || '#60a5fa'
               }}>
                 {editingBooth.boothNo.substring(0, 2)}
               </div>
@@ -433,7 +436,7 @@ export const ManageBooths: React.FC = () => {
 
             <div style={{ paddingTop: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
               <button 
-                style={{ flex: 1, padding: '0.5rem', border: '1px solid #fecaca', borderRadius: '4px', backgroundColor: '#fff', color: '#dc2626', cursor: 'pointer', fontSize: '0.875rem' }}
+                style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--danger)', borderRadius: '4px', backgroundColor: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
                 onClick={() => {
                   if(window.confirm('คุณแน่ใจหรือไม่ที่จะลบบูธนี้?')) deleteBooth.mutate();
                 }}

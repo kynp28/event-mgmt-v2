@@ -35,4 +35,14 @@ export class BookingController {
     const result = await this.bookingService.updateBookingStatus(bookingId, status, organizerId);
     res.status(200).json({ message: `อัปเดตสถานะเป็น ${status} สำเร็จ`, data: result });
   };
+
+  confirmWaitlist = async (req: Request, res: Response) => {
+    const vendorId = req.user!.userId;
+    const { waitlistEntryId } = req.body;
+    
+    if (!waitlistEntryId) throw new ValidationError('waitlistEntryId is required');
+
+    const result = await this.bookingService.confirmWaitlistBooking(vendorId, waitlistEntryId);
+    res.status(200).json({ message: 'ยืนยันการใช้สิทธิ์คิวสำรองและจองบูธสำเร็จ', data: result });
+  };
 }

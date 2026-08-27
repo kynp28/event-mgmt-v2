@@ -12,12 +12,15 @@ import dashboardRoutes from './modules/dashboard/dashboard.routes';
 import waitlistRoutes from './modules/waitlist/waitlist.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import { errorHandler } from './common/middleware/errorHandler';
+import './workers/cleanup.worker';
 
 const app = express();
 
 app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'], credentials: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+import path from 'path';
+app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 
 // Health check
 app.get('/health', (_req, res) => {

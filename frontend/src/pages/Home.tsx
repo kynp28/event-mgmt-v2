@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +27,16 @@ export const Home = () => {
     }
   });
 
+  // Handle scrolling to hash when landing on the page from another route
+  useEffect(() => {
+    if (window.location.hash === '#events-section') {
+      // Small timeout to ensure DOM is ready and data might be loading
+      setTimeout(() => {
+        document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setAppliedSearch({ query: searchQuery, location: selectedLocation });
@@ -45,6 +55,8 @@ export const Home = () => {
   };
 
   const filteredEvents = (events || []).filter((event: any) => {
+    const isEnded = Boolean(event.isEnded || (event.endDate && new Date(event.endDate) < new Date()) || event.eventStatus === 'ended');
+    if (isEnded) return false; // Hide ended fairs from homepage showcase
     const name = event.eventName || '';
     const loc = event.location || '';
     const matchQuery = name.toLowerCase().includes(appliedSearch.query.toLowerCase());
@@ -55,7 +67,7 @@ export const Home = () => {
   return (
     <div style={{ backgroundColor: 'var(--bg-dark)' }}>
       {/* Hero Section */}
-      <div style={{ padding: '6rem 1.5rem', backgroundColor: '#FFFFFF', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ padding: '6rem 1.5rem', backgroundColor: 'var(--bg-dark)', borderBottom: '1px solid var(--border)' }}>
         <div className="container" style={{ textAlign: 'center', maxWidth: '800px', padding: '0' }}>
           <h1 style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1.5rem', lineHeight: 1.2 }}>
             {t('home_title_1')}<span style={{ color: 'var(--primary)' }}>{t('home_title_highlight')}</span>
@@ -68,12 +80,12 @@ export const Home = () => {
             <Link to="/register" style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '1rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1.125rem', boxShadow: '0 4px 6px -1px var(--primary-glow)', textDecoration: 'none' }}>
               {t('vendor_register_free')}
             </Link>
-            <Link to="/login" style={{ backgroundColor: '#F8FAFC', color: 'var(--text-main)', border: '1px solid var(--border)', padding: '1rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1.125rem', textDecoration: 'none' }}>
+            <Link to="/login" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border)', padding: '1rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1.125rem', textDecoration: 'none' }}>
               {t('for_organizer')}
             </Link>
           </div>
 
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', backgroundColor: '#FFFFFF', padding: '0.5rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', flex: 2, minWidth: '200px' }}>
               <Search size={20} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
               <input 
@@ -81,7 +93,7 @@ export const Home = () => {
                 placeholder={t('search_fair')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem' }}
+                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', backgroundColor: 'transparent', color: 'var(--text-main)' }}
               />
             </div>
             <div style={{ width: '1px', backgroundColor: 'var(--border)', margin: '0.5rem 0' }}></div>
@@ -92,9 +104,9 @@ export const Home = () => {
                 onChange={(e) => setSelectedLocation(e.target.value)}
                 style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-main)' }}
               >
-                <option value="">{t('all_provinces')}</option>
-                <option value="Bangkok">{t('bangkok')}</option>
-                <option value="Buriram">{t('buriram')}</option>
+                <option value="" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('all_provinces')}</option>
+                <option value="Bangkok" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('bangkok')}</option>
+                <option value="Buriram" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('buriram')}</option>
               </select>
             </div>
             <button type="submit" style={{ backgroundColor: 'var(--primary)', color: 'white', border: 'none', padding: '0.75rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }}>
@@ -115,7 +127,7 @@ export const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {benefits.map((b, i) => (
               <div key={i} className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
-                <div style={{ width: '64px', height: '64px', backgroundColor: '#EFF6FF', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: 'var(--primary)' }}>
+                <div style={{ width: '64px', height: '64px', backgroundColor: 'var(--primary-glow)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: 'var(--primary)' }}>
                   <b.icon size={32} />
                 </div>
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>{b.title}</h3>
@@ -127,7 +139,7 @@ export const Home = () => {
       </div>
 
       {/* Featured Events */}
-      <div id="events-section" style={{ padding: '5rem 1.5rem', backgroundColor: '#FFFFFF', borderTop: '1px solid var(--border)' }}>
+      <div id="events-section" style={{ padding: '5rem 1.5rem', backgroundColor: 'var(--bg-dark)', borderTop: '1px solid var(--border)' }}>
         <div className="container" style={{ padding: '0' }}>
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -155,7 +167,7 @@ export const Home = () => {
               ))}
             </div>
           ) : filteredEvents.length === 0 ? (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px dashed var(--border)' }}>
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', backgroundColor: 'var(--bg-card-hover)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
               <Search size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
               <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('no_fairs_found')}</h3>
               <p style={{ color: 'var(--text-muted)' }}>{t('try_change_search')}</p>
@@ -174,7 +186,7 @@ export const Home = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {filteredEvents.map((event: any) => (
                 <div key={event.eventId} className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ height: '200px', backgroundColor: '#F1F5F9', position: 'relative' }}>
+                  <div style={{ height: '200px', backgroundColor: 'var(--bg-card-hover)', position: 'relative' }}>
                     <img 
                       src={getImageUrl(event.imageUrl)} 
                       alt={event.eventName} 
@@ -240,31 +252,29 @@ export const Home = () => {
       </div>
 
       {/* Clean Footer */}
-      <footer style={{ backgroundColor: '#0F172A', color: '#94A3B8', padding: '4rem 1.5rem 2rem' }}>
+      <footer style={{ backgroundColor: 'var(--bg-dark)', color: 'var(--text-muted)', padding: '4rem 1.5rem 2rem' }}>
         <div className="container" style={{ padding: 0 }}>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div style={{ gridColumn: 'span 2' }}>
-              <h3 style={{ color: '#F8FAFC', fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>EventCore</h3>
+              <h3 style={{ color: 'var(--text-main)', fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>EventCore</h3>
               <p style={{ maxWidth: '300px', marginBottom: '1.5rem' }}>{t('footer_desc')}</p>
             </div>
             <div>
-              <h4 style={{ color: '#F8FAFC', fontWeight: 600, marginBottom: '1.25rem' }}>{t('for_vendors')}</h4>
+              <h4 style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '1.25rem' }}>{t('for_vendors')}</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><Link to="/events" style={{ color: '#94A3B8', textDecoration: 'none' }}>{t('search_fair')}</Link></li>
-                <li><Link to="/register" style={{ color: '#94A3B8', textDecoration: 'none' }}>{t('how_to_book')}</Link></li>
-                <li><Link to="/" style={{ color: '#94A3B8', textDecoration: 'none' }}>{t('pricing_fees')}</Link></li>
+                <li><Link to="/events" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t('search_fair')}</Link></li>
+                <li><Link to="/register" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t('how_to_book')}</Link></li>
               </ul>
             </div>
             <div>
-              <h4 style={{ color: '#F8FAFC', fontWeight: 600, marginBottom: '1.25rem' }}>{t('help_support')}</h4>
+              <h4 style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '1.25rem' }}>{t('help_support')}</h4>
               <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><Link to="/" style={{ color: '#94A3B8', textDecoration: 'none' }}>{t('contact_us')}</Link></li>
-                <li><Link to="/" style={{ color: '#94A3B8', textDecoration: 'none' }}>{t('terms_of_use')}</Link></li>
-                <li><Link to="/" style={{ color: '#94A3B8', textDecoration: 'none' }}>{t('privacy_policy')}</Link></li>
+                <li><span style={{ color: 'var(--text-muted)' }}>support@eventcore.com</span></li>
+                <li><span style={{ color: 'var(--text-muted)' }}>02-xxx-xxxx</span></li>
               </ul>
             </div>
           </div>
-          <div style={{ paddingTop: '2rem', borderTop: '1px solid #1E293B', textAlign: 'center', fontSize: '0.875rem' }}>
+          <div style={{ paddingTop: '2rem', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '0.875rem' }}>
             © 2026 EventCore. All rights reserved.
           </div>
         </div>

@@ -1,7 +1,7 @@
 import * as argon2 from 'argon2';
 import { AuthRepository } from './auth.repository';
 import { RegisterInput, LoginInput } from './auth.validator';
-import { ConflictError, UnauthorizedError, ForbiddenError } from '../../common/errors/AppError';
+import { ConflictError, UnauthorizedError, ForbiddenError, NotFoundError } from '../../common/errors/AppError';
 import { signToken } from '../../common/utils/jwt';
 
 export interface AuthResult {
@@ -10,6 +10,7 @@ export interface AuthResult {
     userId: number;
     username: string;
     email: string;
+    avatarUrl?: string | null;
     roles: string[];
   };
 }
@@ -44,6 +45,7 @@ export class AuthService {
         userId: user.userId,
         username: user.username,
         email: user.email,
+        avatarUrl: user.avatarUrl,
         roles,
       },
     };
@@ -56,7 +58,10 @@ export class AuthService {
     }
 
     if (user.status === 'suspended') {
-      throw new ForbiddenError('บัญชีนี้ถูกระงับการใช้งาน');
+      throw new ForbiddenError('บัญชีนี้ถูกระงับการใช้งาน', { 
+        isSuspended: true, 
+        suspendReason: user.suspendReason 
+      });
     }
 
     const isPasswordValid = await argon2.verify(user.passwordHash, input.password);
@@ -73,8 +78,93 @@ export class AuthService {
         userId: user.userId,
         username: user.username,
         email: user.email,
+        avatarUrl: user.avatarUrl,
         roles,
       },
     };
+  }
+
+  async getMe(userId: number) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new UnauthorizedError('ไม่พบข้อมูลผู้ใช้');
+    }
+
+    const roles = await this.authRepository.getUserRoles(user.userId);
+    return {
+      userId: user.userId,
+      username: user.username,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      roles,
+    };
+  }
+
+  async updateProfile(userId: number, input: {
+    username?: string;
+    avatarUrl?: string | null;
+    currentPassword?: string;
+    newPassword?: string;
+  }): Promise<AuthResult> {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      throw new UnauthorizedError('ไม่พบข้อมูลผู้ใช้');
+    }
+
+    const updateData: { username?: string; avatarUrl?: string | null; passwordHash?: string } = {};
+
+    if (input.username !== undefined && input.username.trim()) {
+      updateData.username = input.username.trim();
+    }
+
+    if (input.avatarUrl !== undefined) {
+      updateData.avatarUrl = input.avatarUrl;
+    }
+
+    if (input.newPassword) {
+      if (!input.currentPassword) {
+        throw new UnauthorizedError('กรุณาระบุรหัสผ่านปัจจุบันเพื่อเปลี่ยนรหัสผ่าน');
+      }
+      const isCurrentValid = await argon2.verify(user.passwordHash, input.currentPassword);
+      if (!isCurrentValid) {
+        throw new UnauthorizedError('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+      }
+      if (input.newPassword.length < 8) {
+        throw new ConflictError('รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
+      }
+      updateData.passwordHash = await argon2.hash(input.newPassword);
+    }
+
+    const updatedUser = await this.authRepository.updateUser(userId, updateData);
+    const roles = await this.authRepository.getUserRoles(userId);
+    const token = signToken({ userId: updatedUser.userId, username: updatedUser.username, roles });
+
+    return {
+      token,
+      user: {
+        userId: updatedUser.userId,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        avatarUrl: updatedUser.avatarUrl,
+      },
+    };
+  }
+
+  async submitAppeal(email: string, reason: string, evidenceUrl?: string): Promise<void> {
+    const user = await this.authRepository.findUserByEmail(email);
+    if (!user) {
+      throw new NotFoundError('ไม่พบบัญชีผู้ใช้งานที่ผูกกับอีเมลนี้');
+    }
+
+    if (user.status !== 'suspended') {
+      throw new ConflictError('บัญชีนี้ไม่ได้ถูกระงับการใช้งาน');
+    }
+
+    const existingAppeal = await this.authRepository.findPendingAppeal(user.userId);
+    if (existingAppeal) {
+      throw new ConflictError('คุณได้ส่งคำร้องไปแล้ว กรุณารอแอดมินตรวจสอบ');
+    }
+
+    await this.authRepository.createAppeal(user.userId, reason, evidenceUrl);
   }
 }

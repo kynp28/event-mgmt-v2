@@ -116,7 +116,7 @@ export const OrganizerRequestForm: React.FC = () => {
           <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>{t('upload_slip', 'แนบหลักฐานการโอนเงิน')}</h3>
           
           {slipImage ? (
-            <div style={{ position: 'relative', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#f8fafc' }}>
+            <div style={{ position: 'relative', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--bg-card-hover)' }}>
               <img src={slipImage} alt="slip preview" style={{ width: '100%', maxHeight: '400px', objectFit: 'contain' }} />
               <button 
                 onClick={() => setSlipImage(null)}

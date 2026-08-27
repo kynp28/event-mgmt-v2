@@ -80,7 +80,9 @@ model User {
   username     String     @db.VarChar(100)
   email        String     @unique @db.VarChar(150)
   passwordHash String     @map("password_hash") @db.VarChar(255)
+  avatarUrl    String?    @map("avatar_url") @db.LongText
   status       UserStatus @default(active)
+  suspendReason String?   @map("suspend_reason") @db.Text
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
   deletedAt    DateTime?  @map("deleted_at")
@@ -96,6 +98,8 @@ model User {
   createdBooths      Booth[]             @relation("BoothCreatedBy")
   updatedBooths      Booth[]             @relation("BoothUpdatedBy")
   waitlistEntries    Waitlist[]
+  accountAppeals     AccountAppeal[]
+  actionedAppeals    AccountAppeal[]     @relation("AppealActioner")
 
   @@index([status])
   @@index([deletedAt])
@@ -152,6 +156,7 @@ model Event {
   description  String?     @db.Text
   location     String?     @db.Text
   imageUrl     String?     @map("image_url") @db.LongText
+  invoiceUrl   String?     @map("invoice_url") @db.LongText
   startDate    DateTime    @map("start_date")
   endDate      DateTime    @map("end_date")
   eventStatus  EventStatus @default(draft) @map("event_status")
@@ -236,6 +241,12 @@ enum BoothStatus {
   auction
 }
 
+enum BoothLockState {
+  none
+  payment_pending
+  waitlist_reserved
+}
+
 model Booth {
   boothId        Int         @id @default(autoincrement()) @map("booth_id")
   eventId        Int         @map("event_id")
@@ -247,13 +258,18 @@ model Booth {
   status         BoothStatus @default(available)
   posX           Int         @default(0) @map("pos_x")
   posY           Int         @default(0) @map("pos_y")
-  width          Int         @default(80)
-  height         Int         @default(60)
-  createdBy      Int?        @map("created_by")
-  updatedBy      Int?        @map("updated_by")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
-  deletedAt      DateTime?   @map("deleted_at")
+  width          Int            @default(80)
+  height         Int            @default(60)
+  lockState      BoothLockState @default(none) @map("lock_state")
+  lockedByUserId Int?           @map("locked_by_user_id")
+  lockedAt       DateTime?      @map("locked_at")
+  lockedUntil    DateTime?      @map("locked_until")
+  version        Int            @default(0)
+  createdBy      Int?           @map("created_by")
+  updatedBy      Int?           @map("updated_by")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
 
   event    Event     @relation(fields: [eventId], references: [eventId])
   zone     Zone?     @relation(fields: [zoneId], references: [zoneId])
@@ -287,11 +303,13 @@ model Booking {
   boothId     Int           @map("booth_id")
   eventId     Int           @map("event_id")
   bookingDate DateTime      @default(now()) @map("booking_date")
-  totalAmount Decimal       @map("total_amount") @db.Decimal(10, 2)
-  status      BookingStatus @default(pending)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-  deletedAt   DateTime?     @map("deleted_at")
+  totalAmount     Decimal       @map("total_amount") @db.Decimal(10, 2)
+  status          BookingStatus @default(pending)
+  paymentDeadline DateTime?     @map("payment_deadline")
+  cancelReason    String?       @map("cancel_reason") @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
 
   vendor  User     @relation("VendorBookings", fields: [vendorId], references: [userId])
   booth   Booth    @relation(fields: [boothId], references: [boothId])
@@ -404,10 +422,14 @@ model Waitlist {
   waitlistId Int            @id @default(autoincrement()) @map("waitlist_id")
   vendorId   Int            @map("vendor_id")
   eventId    Int            @map("event_id")
-  boothId    Int            @map("booth_id")
-  status     WaitlistStatus @default(waiting)
-  createdAt  DateTime       @default(now()) @map("created_at")
-  updatedAt  DateTime       @updatedAt @map("updated_at")
+  boothId       Int            @map("booth_id")
+  status        WaitlistStatus @default(waiting)
+  queuePosition Int            @default(0) @map("queue_position")
+  offeredAt     DateTime?      @map("offered_at")
+  offerDeadline DateTime?      @map("offer_deadline")
+  cancelReason  String?        @map("cancel_reason") @db.VarChar(50)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
 
   vendor User  @relation(fields: [vendorId], references: [userId])
   event  Event @relation(fields: [eventId], references: [eventId])
@@ -418,4 +440,33 @@ model Waitlist {
   @@index([boothId])
   @@index([status])
   @@map("waitlist")
+}
+
+// =====================================================
+// ACCOUNT APPEALS
+// =====================================================
+
+enum AppealStatus {
+  pending
+  approved
+  rejected
+}
+
+model AccountAppeal {
+  appealId    Int          @id @default(autoincrement()) @map("appeal_id")
+  userId      Int          @map("user_id")
+  reason      String       @db.Text
+  evidenceUrl String?      @map("evidence_url") @db.LongText
+  status      AppealStatus @default(pending)
+  actionedBy  Int?         @map("actioned_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  user     User  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  actioner User? @relation("AppealActioner", fields: [actionedBy], references: [userId])
+
+  @@index([userId])
+  @@index([status])
+  @@index([actionedBy])
+  @@map("account_appeals")
 }

@@ -28,12 +28,12 @@ export class DashboardRepository {
       totalVendors,
       totalOrganizers,
       totalBookings,
-      totalRevenue: revenueAggr._sum.totalAmount || 0,
+      totalRevenue: Number(revenueAggr._sum.totalAmount || 0),
     };
   }
 
   async getOrganizerStats(organizerId: number) {
-    const [totalEvents, totalBooths, totalBookings, revenueAggr] = await Promise.all([
+    const [totalEvents, totalBooths, totalBookings, revenueAggr, upcomingEvents] = await Promise.all([
       prisma.event.count({
         where: { organizerId, deletedAt: null }
       }),
@@ -50,6 +50,11 @@ export class DashboardRepository {
           deletedAt: null 
         },
         _sum: { totalAmount: true }
+      }),
+      prisma.event.findMany({
+        where: { organizerId, deletedAt: null },
+        select: { eventId: true, eventName: true, startDate: true, endDate: true, eventStatus: true, location: true },
+        orderBy: { startDate: 'asc' }
       })
     ]);
 
@@ -57,7 +62,8 @@ export class DashboardRepository {
       totalEvents,
       totalBooths,
       totalBookings,
-      totalRevenue: revenueAggr._sum.totalAmount || 0,
+      totalRevenue: Number(revenueAggr._sum.totalAmount || 0),
+      upcomingEvents
     };
   }
 }

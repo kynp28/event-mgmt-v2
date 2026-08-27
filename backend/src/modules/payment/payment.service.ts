@@ -45,7 +45,13 @@ export class PaymentService {
     return this.paymentRepository.findAllPendingPayments(organizerId);
   }
 
-  async verifyPayment(paymentId: number, status: PaymentStatus, verifierId: number, isAdmin: boolean = false) {
+  async verifyPayment(
+    paymentId: number, 
+    status: PaymentStatus, 
+    verifierId: number, 
+    isAdmin: boolean = false,
+    options?: { reason?: string; action?: 'request_reupload' | 'cancel_booking' }
+  ) {
     const payment = await this.paymentRepository.findPaymentById(paymentId);
     if (!payment) throw new NotFoundError('ไม่พบข้อมูลชำระเงิน');
     if (payment.status !== 'pending') throw new ConflictError('การชำระเงินนี้ได้รับการตรวจสอบแล้ว');
@@ -55,6 +61,12 @@ export class PaymentService {
       throw new ForbiddenError('คุณไม่มีสิทธิ์ยืนยันการชำระเงินนี้');
     }
 
-    return this.paymentRepository.updatePaymentStatusWithTransaction(paymentId, status, verifierId, payment.bookingId);
+    return this.paymentRepository.updatePaymentStatusWithTransaction(
+      paymentId, 
+      status, 
+      verifierId, 
+      payment.bookingId,
+      options
+    );
   }
 }

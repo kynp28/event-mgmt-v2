@@ -4,8 +4,9 @@ import type { ReactNode } from 'react';
 export interface UserPayload {
   userId: number;
   username?: string;
+  avatarUrl?: string | null;
   roles: string[];
-  permissions: string[];
+  permissions?: string[];
   exp?: number;
 }
 
@@ -14,6 +15,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string) => void;
   logout: () => void;
+  updateUser: (updatedFields: Partial<UserPayload>) => void;
   isAuthenticated: boolean;
   hasRole: (role: string) => boolean;
 }
@@ -46,7 +48,6 @@ const parseJwt = (token: string): UserPayload | null => {
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<UserPayload | null>(() => {
-    // Parse token ทันทีเพื่อลดช่วง race condition
     const savedToken = localStorage.getItem('token');
     if (savedToken) {
       return parseJwt(savedToken);
@@ -59,8 +60,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const decoded = parseJwt(token);
       if (decoded) {
         setUser(decoded);
+        // Fetch full profile (avatarUrl, latest username)
+        fetch('http://localhost:5000/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data?.data) {
+              setUser(prev => prev ? { ...prev, ...data.data } : data.data);
+            }
+          })
+          .catch(() => {});
       } else {
-        // Token invalid หรือหมดอายุ
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
@@ -81,6 +92,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const updateUser = (updatedFields: Partial<UserPayload>) => {
+    setUser(prev => prev ? { ...prev, ...updatedFields } : null);
+  };
+
   const hasRole = (role: string) => {
     return user?.roles.includes(role) || false;
   };
@@ -89,7 +104,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isAuthenticated = !!token && !!user;
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, hasRole }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, isAuthenticated, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

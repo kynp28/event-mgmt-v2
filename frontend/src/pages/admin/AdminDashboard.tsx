@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Users, Store, CircleDollarSign, ShieldCheck, Activity, ChevronRight, AlertTriangle } from 'lucide-react';
-import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
+import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 export const AdminDashboard = () => {
   const { t } = useTranslation();
@@ -110,22 +110,22 @@ export const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="glass-card" style={{ padding: '2rem', backgroundColor: '#1E293B', color: 'white' }}>
+          <div className="glass-card" style={{ padding: '2rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>
             <div style={{ marginBottom: '1.5rem' }}>
               <ShieldCheck size={32} color="#38BDF8" />
             </div>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'white' }}>{t('system_health', 'สถานะระบบ (System Health)')}</h3>
+            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>{t('system_health', 'สถานะระบบ (System Health)')}</h3>
             <p style={{ fontSize: '0.875rem', lineHeight: 1.6, opacity: 0.8, marginBottom: '1.5rem' }}>
               {t('health_desc', 'ระบบทำงานปกติ ไม่มีรายงานความขัดข้อง เซิร์ฟเวอร์ฐานข้อมูลทำงานเต็มประสิทธิภาพ')}
             </p>
             
-            <Link to="/admin/organizer-requests" style={{ display: 'block', backgroundColor: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '8px', marginBottom: '0.75rem', textDecoration: 'none', color: 'white' }}>
+            <Link to="/admin/organizer-requests" style={{ display: 'block', backgroundColor: 'var(--glass-bg)', padding: '1rem', borderRadius: '8px', marginBottom: '0.75rem', textDecoration: 'none', color: 'var(--text-main)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>{t('pending_organizer_requests', 'คำร้องขอเป็นผู้จัดงาน (รออนุมัติ)')}</span>
                 <span style={{ fontWeight: 600, color: '#FDE047' }}><AlertTriangle size={14} className="inline mr-1" /> {pendingRequests?.length || 0} {t('items', 'รายการ')}</span>
               </div>
             </Link>
-            <Link to="/admin/payments" style={{ display: 'block', backgroundColor: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: '8px', textDecoration: 'none', color: 'white' }}>
+            <Link to="/admin/payments" style={{ display: 'block', backgroundColor: 'var(--glass-bg)', padding: '1rem', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-main)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.875rem', opacity: 0.8 }}>ตรวจสอบการชำระเงิน</span>
                 <span style={{ fontWeight: 600, color: '#38BDF8' }}><CircleDollarSign size={14} className="inline mr-1" /> ดูสลิป</span>
