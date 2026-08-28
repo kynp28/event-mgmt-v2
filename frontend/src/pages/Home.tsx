@@ -5,12 +5,30 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, MapPin, Search, Users, Map, ChevronRight, ShieldCheck } from 'lucide-react';
 import api from '../services/api';
 
+// Swiper imports
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+
 export const Home = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [appliedSearch, setAppliedSearch] = useState({ query: '', location: '' });
+
+  // Mock Promotional Banners (Doubled to 8 to ensure smooth looping in Swiper)
+  const mockBanners = [
+    { id: 1, imgUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=1200' },
+    { id: 2, imgUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1200' },
+    { id: 3, imgUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=1200' },
+    { id: 4, imgUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200' },
+    { id: 5, imgUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=1200' },
+    { id: 6, imgUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1200' },
+    { id: 7, imgUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=1200' },
+    { id: 8, imgUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200' },
+  ];
 
   // Example stats for vendors
   const benefits = [
@@ -113,6 +131,43 @@ export const Home = () => {
               {t('search')}
             </button>
           </form>
+        </div>
+
+        {/* Promotional Banner Slider */}
+        <div style={{ marginTop: '4rem', paddingBottom: '2rem' }}>
+          <Swiper
+            modules={[Autoplay]}
+            spaceBetween={20}
+            slidesPerView={1.2}
+            centeredSlides={true}
+            loop={true}
+            speed={12000} // Much slower transition duration for a relaxed ticker
+            autoplay={{
+              delay: 0, // No delay between transitions (continuous)
+              disableOnInteraction: false,
+            }}
+            breakpoints={{
+              640: { slidesPerView: 1.5, spaceBetween: 30 },
+              1024: { slidesPerView: 1.8, spaceBetween: 40 },
+            }}
+            style={{ 
+              width: '100%', 
+              paddingBottom: '3rem'
+            }}
+            className="promo-swiper ticker-mode"
+          >
+            {mockBanners.map(banner => (
+              <SwiperSlide key={banner.id}>
+                <div className="promo-slide-card">
+                  <img 
+                    src={banner.imgUrl} 
+                    alt={`Banner ${banner.id}`} 
+                    style={{ width: '100%', height: '450px', objectFit: 'cover' }}
+                  />
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
         </div>
       </div>
 

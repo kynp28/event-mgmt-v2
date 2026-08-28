@@ -591,3 +591,24 @@ a:hover { color: var(--primary-hover); }
   .md\:block { display: block !important; }
   .md\:hidden { display: none !important; }
 }
+
+/* Swiper Linear Ticker Mode */
+.promo-swiper.ticker-mode .swiper-wrapper {
+  transition-timing-function: linear !important;
+}
+
+/* Hover effect for Promo Slider */
+.promo-slide-card {
+  height: 450px;
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.4s ease;
+  transform: scale(1);
+  cursor: pointer;
+}
+.promo-slide-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4);
+  z-index: 10;
+  position: relative;
+}
