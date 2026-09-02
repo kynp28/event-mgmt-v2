@@ -162,7 +162,7 @@ export const Home = () => {
                   <img 
                     src={banner.imgUrl} 
                     alt={`Banner ${banner.id}`} 
-                    style={{ width: '100%', height: '450px', objectFit: 'cover' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
               </SwiperSlide>

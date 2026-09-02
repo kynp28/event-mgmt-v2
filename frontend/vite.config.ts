@@ -6,5 +6,11 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env': {}
+  },
+  server: {
+    host: true,
+    watch: {
+      usePolling: true
+    }
   }
 })
