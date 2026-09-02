@@ -54,6 +54,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    command: sh -c "rm -rf node_modules/* package-lock.json; npm install && npm run dev -- --host"
     depends_on:
       - backend
 
