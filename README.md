@@ -1,126 +1,95 @@
-# EventCore (Event Management Platform)
+# 🎊 Event Management System
 
-EventCore is a comprehensive event and exhibition management platform. It allows **Organizers** to manage events and booth layouts, **Vendors** to book booths through an interactive floor plan, and **Admins** to oversee the entire ecosystem.
+ระบบจัดสรรพื้นที่ขายของในงานกิจกรรมแบบครบวงจร (Event Sales Area Management System) พัฒนาขึ้นเพื่อช่วยให้ผู้จัดงาน (Organizer) สามารถบริหารจัดการพื้นที่เช่า, ผังบูธ, และการชำระเงินได้อย่างมีประสิทธิภาพ และช่วยให้ผู้ค้า (Vendor) สามารถจองบูธที่ต้องการได้อย่างสะดวกและรวดเร็ว
 
-![Project Status](https://img.shields.io/badge/status-active-success.svg)
-![React](https://img.shields.io/badge/React-18-blue.svg)
-![Node.js](https://img.shields.io/badge/Node.js-Express-green.svg)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-teal.svg)
-
-## 🌟 Key Features
-
-### For Vendors & Visitors
-- **Event Discovery:** Search and browse upcoming events and exhibitions.
-- **Interactive Floor Plan:** View booth availability in real-time and select booths directly from the interactive map.
-- **Easy Booking:** Simple booth booking process with waitlist support for fully booked zones.
-- **Dashboard:** Track booking statuses, invoices, and event details.
-
-### For Organizers
-- **Event Management:** Create and edit event details, dates, and locations.
-- **Visual Layout Editor:** Drag-and-drop or grid-based layout editor to design the event floor plan.
-- **Booth Management:** Define booth zones, pricing, and sizes.
-- **Booking Management:** Approve/reject vendor bookings and manage waitlists.
-
-### For System Admins
-- **Role Management:** Approve organizer requests and manage user roles.
-- **System Overview:** Monitor platform statistics, active events, and users.
+## ✨ ฟีเจอร์หลัก (Key Features)
+- **Role-Based Access Control (RBAC):** ระบบจัดการสิทธิ์การใช้งาน แบ่งเป็น Admin, Organizer, Vendor และ Visitor
+- **Interactive Event Calendar:** ปฏิทินแสดงตารางการจัดงานอีเวนต์ต่างๆ
+- **Booth Booking System:** ระบบจองบูธ พร้อมดูแผนผังการจัดงาน (Zones & Landmarks) แบบเห็นภาพรวม
+- **Payment & Verification:** ระบบอัปโหลดสลิปชำระเงิน และระบบตรวจสอบการชำระเงินสำหรับผู้จัดงาน
+- **Dashboard & Analytics:** แดชบอร์ดสรุปยอดขาย สถานะการจอง และสถิติต่างๆ
 
 ---
 
-## 🛠️ Technology Stack
-
-### Frontend
-- **Framework:** React (Vite)
-- **Language:** TypeScript
-- **Routing:** React Router DOM
-- **State Management:** React Query / Context API
-- **Styling:** Custom CSS Utility Classes (Tailwind-inspired structure) & Lucide-React Icons
-- **Internationalization:** i18next (English / Thai)
-
-### Backend
-- **Framework:** Node.js with Express
-- **Language:** TypeScript
-- **Database:** PostgreSQL
-- **ORM:** Prisma
-- **Authentication:** JWT (JSON Web Tokens) & bcryptjs
-- **Validation:** Zod
+## 🛠 เทคโนโลยีที่ใช้ (Tech Stack)
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, Swiper (สำหรับ Carousel)
+- **Backend:** Node.js, Express, TypeScript
+- **Database:** MySQL, Prisma ORM
+- **Queue/Background Jobs:** Redis (สำหรับจัดการสถานะหมดเวลาจอง)
+- **Infrastructure:** Docker & Docker Compose
 
 ---
 
-## 🚀 Getting Started
+## 🔑 บัญชีสำหรับทดสอบระบบ (Test Accounts)
+ระบบได้ทำการจำลองข้อมูลผู้ใช้งานเบื้องต้น (Seed Data) ไว้เรียบร้อยแล้ว สามารถใช้บัญชีด้านล่างนี้ในการล็อกอินเข้าสู่ระบบได้เลย:
+| Role | Email | Password |
+|---|---|---|
+| **Admin** (ผู้ดูแลระบบ) | `admin@test.com` | `123456` |
+| **Organizer** (ผู้จัดงาน) | `organizer@test.com` | `123456` |
+| **Vendor** (พ่อค้า/แม่ค้า) | `vendor@test.com` | `123456` |
 
-### Prerequisites
-- Node.js (v18 or higher)
-- PostgreSQL (or Docker for running the database)
+---
 
-### Installation
+## 🚀 วิธีการติดตั้งและรันโปรเจกต์
 
-1. **Clone the repository:**
+สามารถเลือกรันระบบได้ 2 วิธี คือ **รันด้วย Docker (แนะนำ)** หรึอ **รันแบบ Manual** 
+
+### วิธีที่ 1: รันด้วย Docker (แนะนำ - ง่ายที่สุด)
+**สิ่งที่ต้องมีในเครื่อง:** [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+1. เปิด Docker Desktop ทิ้งไว้
+2. เปิด Command Prompt (CMD) หรือ Terminal แล้วเข้าไปที่โฟลเดอร์โปรเจกต์
+3. รันคำสั่งนี้เพื่อเปิดระบบทั้งหมด (Frontend, Backend, DB, Redis)
    ```bash
-   git clone https://github.com/kynp28/event-mgmt-v2.git
-   cd event-mgmt-v2
+   docker-compose up -d --build
    ```
+4. รอจนกว่าระบบจะรันเสร็จ จากนั้นเปิดเบราว์เซอร์ไปที่:
+   - **หน้าเว็บ (Frontend):** `http://localhost:5173`
+   - **API (Backend):** `http://localhost:5000`
+5. *หากต้องการปิดระบบ ให้ใช้คำสั่ง: `docker-compose down`*
 
-2. **Setup the Database (using Docker):**
-   ```bash
-   docker-compose up -d
-   ```
+---
 
-3. **Backend Setup:**
+### วิธีที่ 2: รันแบบ Manual (ไม่ได้ใช้ Docker)
+**สิ่งที่ต้องมีในเครื่อง:** [Node.js](https://nodejs.org/) (แนะนำ v20 หรือ v22), MySQL, Redis
+
+#### 1. การตั้งค่า Backend
+1. เข้าไปที่โฟลเดอร์ `backend`
    ```bash
    cd backend
-   npm install
-   
-   # Copy environment variables
-   cp .env.example .env
-   
-   # Apply Prisma migrations
-   npx prisma generate
-   npx prisma migrate dev
-   
-   # Start the development server
-   npm run dev
    ```
-
-4. **Frontend Setup:**
+2. ติดตั้ง Dependencies
    ```bash
-   cd ../frontend
    npm install
-   
-   # Start the Vite development server
+   ```
+3. คัดลอกไฟล์ `.env.example` เป็น `.env` และตั้งค่า `DATABASE_URL` และ `REDIS_URL` ให้ตรงกับฐานข้อมูลในเครื่องของคุณ
+4. สร้างตารางฐานข้อมูลและใส่ข้อมูลจำลอง (Seed)
+   ```bash
+   npx prisma migrate dev
+   npm run seed
+   ```
+5. รันเซิร์ฟเวอร์
+   ```bash
    npm run dev
    ```
 
-### Default Accounts (Seed Data)
-If you have run the seed script (`npm run seed` in the backend), you can use the following default accounts to log in:
-- **Admin:** `admin@example.com` / `password123`
-- **Organizer:** `organizer@example.com` / `password123`
-- **Vendor:** `vendor@example.com` / `password123`
+#### 2. การตั้งค่า Frontend
+1. เปิด Terminal ใหม่ เข้าไปที่โฟลเดอร์ `frontend`
+   ```bash
+   cd frontend
+   ```
+2. ติดตั้ง Dependencies
+   ```bash
+   npm install
+   ```
+3. รันระบบ Frontend
+   ```bash
+   npm run dev
+   ```
+4. เปิดเบราว์เซอร์ไปที่ `http://localhost:5173`
 
 ---
 
-## 📁 Project Structure
-
-```text
-event-mgmt-v2/
-├── backend/                  # Node.js + Express API
-│   ├── prisma/               # Prisma schema and migrations
-│   └── src/
-│       ├── common/           # Middleware, errors, utils
-│       ├── config/           # App configurations
-│       ├── modules/          # Feature modules (auth, event, booking, etc.)
-│       └── server.ts         # App entry point
-│
-└── frontend/                 # React Application
-    ├── public/               # Static assets
-    └── src/
-        ├── components/       # Reusable UI components
-        ├── context/          # React contexts (Auth)
-        ├── pages/            # Page components (Home, Admin, Organizer, Vendor)
-        ├── services/         # API integration (Axios)
-        ├── locales/          # i18n translation files
-        └── App.tsx           # Main application routing
-```
-
-## 📄 License
-This project is proprietary and confidential.
+## 📝 โครงสร้างโปรเจกต์ (Project Structure)
+- `/frontend` - โค้ดส่วนหน้าบ้านทั้งหมด (React)
+- `/backend` - โค้ดส่วนระบบ API ทั้งหมด (Express)
+- `docker-compose.yml` - ไฟล์ตั้งค่าสำหรับรันระบบด้วย Docker 
