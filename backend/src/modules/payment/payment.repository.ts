@@ -58,14 +58,27 @@ export class PaymentRepository {
     options?: { reason?: string; action?: 'request_reupload' | 'cancel_booking' }
   ): Promise<Payment> {
     return prisma.$transaction(async (tx) => {
-      const payment = await tx.payment.update({
-        where: { paymentId },
+      const paymentResult = await tx.payment.updateMany({
+        where: { 
+          paymentId,
+          status: 'pending',
+          booking: {
+            status: 'pending',
+            paymentDeadline: { gt: new Date() }
+          }
+        },
         data: {
           status,
           verifiedBy,
           verifiedAt: new Date(),
         }
       });
+
+      if (paymentResult.count !== 1) {
+        throw new Error('Payment is no longer valid or booking has expired');
+      }
+
+      const payment = await tx.payment.findUniqueOrThrow({ where: { paymentId } });
 
       if (status === 'verified') {
         const confirmedBooking = await tx.booking.update({

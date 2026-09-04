@@ -7,8 +7,8 @@ export class AdminController {
   private adminService = new AdminService();
 
   getAllEvents = async (req: Request, res: Response) => {
-    const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const page = Math.max(parseInt(req.query.page as string, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 100);
     const skip = (page - 1) * limit;
     
     const events = await this.adminService.getAllEvents(skip, limit);
@@ -16,8 +16,8 @@ export class AdminController {
   };
 
   getAllUsers = async (req: Request, res: Response) => {
-    const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const page = Math.max(parseInt(req.query.page as string, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 100);
     const skip = (page - 1) * limit;
     
     const users = await this.adminService.getAllUsers(skip, limit);
@@ -42,8 +42,8 @@ export class AdminController {
   };
 
   getAppeals = async (req: Request, res: Response) => {
-    const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const page = Math.max(parseInt(req.query.page as string, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string, 10) || 50, 1), 100);
     const skip = (page - 1) * limit;
     
     const appeals = await this.adminService.getAppeals(skip, limit);

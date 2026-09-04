@@ -156,16 +156,22 @@ export async function runAppealCleanup() {
   let deletedCount = 0;
   for (const appeal of oldAppeals) {
     try {
-      // 1. Delete file if exists
       if (appeal.evidenceUrl) {
-        // evidenceUrl is like '/uploads/appeals/filename.png'
-        const filePath = path.join(process.cwd(), 'public', appeal.evidenceUrl);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
+        const uploadRoot = path.resolve(process.cwd(), 'public', 'uploads', 'appeals');
+        const relativePath = appeal.evidenceUrl.replace(/^\/uploads\/appeals\//, '');
+        
+        if (relativePath) {
+          const targetPath = path.resolve(uploadRoot, relativePath);
+          if (targetPath.startsWith(`${uploadRoot}${path.sep}`)) {
+            if (fs.existsSync(targetPath)) {
+              fs.unlinkSync(targetPath);
+            }
+          } else {
+            console.warn('[Cleanup] Invalid evidence path detected', appeal.appealId);
+          }
         }
       }
       
-      // 2. Delete record
       await prisma.accountAppeal.delete({
         where: { appealId: appeal.appealId }
       });

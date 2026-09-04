@@ -65,11 +65,10 @@ export const Login: React.FC = () => {
     
     try {
       const res = await api.post('/auth/login', { email, password });
-      const token = res.data.data.token;
-      login(token);
+      const user = res.data.data.user;
+      login(user);
       // Redirect ตาม Role ของ User
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const roles: string[] = payload.roles || [];
+      const roles: string[] = user.roles || [];
       if (roles.includes('admin')) navigate('/admin');
       else if (roles.includes('organizer')) navigate('/organizer');
       else if (roles.includes('vendor')) navigate('/vendor');

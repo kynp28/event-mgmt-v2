@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from './auth.controller';
 import { validateBody } from '../../common/middleware/validate';
-import { registerSchema, loginSchema, appealSchema } from './auth.validator';
+import { registerSchema, loginSchema, appealSchema, updateProfileSchema } from './auth.validator';
 import { authenticate } from '../../common/middleware/authenticate';
 import { asyncHandler } from '../../common/utils/asyncHandler';
 import rateLimit from 'express-rate-limit';
@@ -35,6 +35,11 @@ router.post(
   asyncHandler(authController.login)
 );
 
+router.post(
+  '/logout',
+  asyncHandler(authController.logout)
+);
+
 import { upload } from '../../common/middleware/upload';
 
 router.post(
@@ -54,6 +59,7 @@ router.get(
 router.patch(
   '/profile',
   authenticate,
+  validateBody(updateProfileSchema),
   asyncHandler(authController.updateProfile)
 );
 

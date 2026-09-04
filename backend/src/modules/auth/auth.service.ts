@@ -1,7 +1,7 @@
 import * as argon2 from 'argon2';
 import { AuthRepository } from './auth.repository';
 import { RegisterInput, LoginInput } from './auth.validator';
-import { ConflictError, UnauthorizedError, ForbiddenError, NotFoundError } from '../../common/errors/AppError';
+import { ConflictError, UnauthorizedError, ForbiddenError } from '../../common/errors/AppError';
 import { signToken } from '../../common/utils/jwt';
 
 export interface AuthResult {
@@ -146,23 +146,20 @@ export class AuthService {
         username: updatedUser.username,
         email: updatedUser.email,
         avatarUrl: updatedUser.avatarUrl,
+        roles,
       },
     };
   }
 
   async submitAppeal(email: string, reason: string, evidenceUrl?: string): Promise<void> {
     const user = await this.authRepository.findUserByEmail(email);
-    if (!user) {
-      throw new NotFoundError('ไม่พบบัญชีผู้ใช้งานที่ผูกกับอีเมลนี้');
-    }
-
-    if (user.status !== 'suspended') {
-      throw new ConflictError('บัญชีนี้ไม่ได้ถูกระงับการใช้งาน');
+    if (!user || user.status !== 'suspended') {
+      return;
     }
 
     const existingAppeal = await this.authRepository.findPendingAppeal(user.userId);
     if (existingAppeal) {
-      throw new ConflictError('คุณได้ส่งคำร้องไปแล้ว กรุณารอแอดมินตรวจสอบ');
+      return;
     }
 
     await this.authRepository.createAppeal(user.userId, reason, evidenceUrl);

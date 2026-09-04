@@ -13,12 +13,19 @@ import waitlistRoutes from './modules/waitlist/waitlist.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import { errorHandler } from './common/middleware/errorHandler';
 import './workers/cleanup.worker';
+import cookieParser from 'cookie-parser';
+
+const secret = process.env.JWT_SECRET;
+if (!secret || secret.length < 32) {
+  throw new Error('JWT_SECRET must be a strong secret of at least 32 characters');
+}
 
 const app = express();
 
+app.use(cookieParser());
 app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:3000'], credentials: true }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ limit: '2mb', extended: true }));
 import path from 'path';
 app.use('/uploads', express.static(path.join(process.cwd(), 'public', 'uploads')));
 

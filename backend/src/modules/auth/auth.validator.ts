@@ -24,6 +24,14 @@ export const appealSchema = z.object({
   reason: z.string().min(10, 'กรุณาระบุเหตุผลอย่างน้อย 10 ตัวอักษร'),
 });
 
+export const updateProfileSchema = z.object({
+  username: z.string().trim().min(3).max(100).optional(),
+  avatarUrl: z.string().url().max(2048).nullable().optional(),
+  currentPassword: z.string().min(1).optional(),
+  newPassword: z.string().min(8).max(255).optional(),
+}).strict();
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AppealInput = z.infer<typeof appealSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

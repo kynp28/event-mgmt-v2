@@ -14,6 +14,7 @@ const mockUser = (overrides: Partial<User> = {}): User => ({
   passwordHash: 'hashed',
   avatarUrl: null,
   status: 'active',
+  suspendReason: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,

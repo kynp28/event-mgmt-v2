@@ -11,7 +11,7 @@ if (!fs.existsSync(uploadDir)) {
 
 // Multer config for generic uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req, _file, cb) => {
     // Optionally create subfolders, e.g., 'public/uploads/appeals'
     const folder = req.originalUrl.includes('appeal') ? 'appeals' : 'misc';
     const dest = path.join(uploadDir, folder);
@@ -20,18 +20,23 @@ const storage = multer.diskStorage({
     }
     cb(null, dest);
   },
-  filename: (req, file, cb) => {
+  filename: (_req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
-const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  // Accept image files
-  if (file.mimetype.startsWith('image/')) {
+const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedTypes = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  ]);
+
+  if (allowedTypes.has(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('รองรับเฉพาะไฟล์รูปภาพเท่านั้น'));
+    cb(new Error('รองรับเฉพาะไฟล์รูปภาพ (JPEG, PNG, WEBP) เท่านั้น และไม่อนุญาต SVG'));
   }
 };
 

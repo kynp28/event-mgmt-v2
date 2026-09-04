@@ -3,6 +3,15 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Database seeding is disabled in production');
+  }
+
+  const seedPassword = process.env.SEED_PASSWORD;
+  if (!seedPassword || seedPassword.length < 12) {
+    throw new Error('SEED_PASSWORD must be supplied securely (at least 12 characters)');
+  }
+
   console.log('🌱 Seeding database...');
 
   // Roles
@@ -84,7 +93,7 @@ async function main() {
   console.log('✅ Role-Permission mappings seeded');
 
   // Seed Users
-  const passwordHash = await import('argon2').then(argon2 => argon2.hash('123456'));
+  const passwordHash = await import('argon2').then(argon2 => argon2.hash(seedPassword));
   
   const testUsers = [
     { email: 'admin@test.com', username: 'Admin Tester', roleName: 'admin' },
@@ -92,37 +101,29 @@ async function main() {
     { email: 'vendor@test.com', username: 'Vendor Tester', roleName: 'vendor' },
   ];
 
-  for (const tu of testUsers) {
-    const user = await prisma.user.upsert({
-      where: { email: tu.email },
-      update: { passwordHash },
-      create: {
-        email: tu.email,
-        username: tu.username,
-        passwordHash,
-      }
-    });
-
-    // Check if user already has this role
-    const existingRole = await prisma.userRole.findUnique({
-      where: {
-        userId_roleId: {
-          userId: user.userId,
-          roleId: roleMap[tu.roleName]!
-        }
-      }
-    });
-
-    if (!existingRole) {
-      await prisma.userRole.create({
+  for (const t of testUsers) {
+    let user = await prisma.user.findUnique({ where: { email: t.email } });
+    if (!user) {
+      user = await prisma.user.create({
         data: {
-          userId: user.userId,
-          roleId: roleMap[tu.roleName]!
+          username: t.username,
+          email: t.email,
+          passwordHash,
         }
       });
+      
+      const role = await prisma.role.findUnique({ where: { roleName: t.roleName } });
+      if (role) {
+        await prisma.userRole.create({
+          data: {
+            userId: user.userId,
+            roleId: role.roleId
+          }
+        });
+      }
     }
   }
-  console.log('✅ Test users seeded with password "123456":');
+  console.log('✅ Test users seeded.');
   testUsers.forEach(u => console.log(`   - ${u.email} (${u.roleName})`));
 
   console.log('🎉 Seed complete!');

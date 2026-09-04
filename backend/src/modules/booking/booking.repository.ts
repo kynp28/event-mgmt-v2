@@ -158,16 +158,37 @@ export class BookingRepository {
 
   async updateBookingStatusWithTransaction(bookingId: number, newStatus: BookingStatus, boothId: number): Promise<Booking> {
     return prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.update({
-        where: { bookingId },
+      let allowedCurrentStates: BookingStatus[] = [];
+      
+      if (newStatus === 'cancelled') {
+        allowedCurrentStates = ['pending', 'confirmed'];
+      } else if (newStatus === 'confirmed') {
+        allowedCurrentStates = ['pending'];
+      } else if (newStatus === 'pending') {
+        throw new ConflictError('Cannot transition back to pending manually');
+      } else {
+        allowedCurrentStates = ['pending', 'confirmed', 'cancelled'];
+      }
+
+      const result = await tx.booking.updateMany({
+        where: { 
+          bookingId,
+          status: { in: allowedCurrentStates }
+        },
         data: { status: newStatus },
       });
+
+      if (result.count !== 1) {
+        throw new ConflictError('Invalid booking state transition');
+      }
+      
+      const booking = await tx.booking.findUniqueOrThrow({ where: { bookingId } });
 
       // If cancelled, free the booth entirely
       if (newStatus === 'cancelled') {
         await tx.booth.update({
           where: { boothId },
-          data: { status: 'available', lockState: 'none' },
+          data: { status: 'available', lockState: 'none', lockedByUserId: null, lockedAt: null, lockedUntil: null },
         });
       } 
       // If confirmed, make the booth booked and release lock

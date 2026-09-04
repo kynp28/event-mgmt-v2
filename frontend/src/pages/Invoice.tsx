@@ -3,6 +3,20 @@ import { useParams, Link } from 'react-router-dom';
 import { FileText, Download, Printer, ArrowLeft, Clock, AlertCircle, ExternalLink } from 'lucide-react';
 import api from '../services/api';
 
+const isSafeDocumentUrl = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  try {
+    // Check for safe data URIs first
+    if (value.startsWith('data:image/') || value.startsWith('data:application/pdf')) {
+      return true;
+    }
+    const url = new URL(value, window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch {
+    return false;
+  }
+};
+
 export const Invoice = () => {
   const { id } = useParams();
   const [booking, setBooking] = useState<any>(null);
@@ -60,7 +74,8 @@ export const Invoice = () => {
     );
   }
 
-  const invoiceUrl = booking.event?.invoiceUrl;
+  const rawInvoiceUrl = booking.event?.invoiceUrl;
+  const invoiceUrl = isSafeDocumentUrl(rawInvoiceUrl) ? rawInvoiceUrl : null;
   const isPdf = invoiceUrl && (invoiceUrl.startsWith('data:application/pdf') || invoiceUrl.endsWith('.pdf'));
 
   return (
