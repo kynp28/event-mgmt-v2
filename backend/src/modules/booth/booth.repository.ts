@@ -44,6 +44,13 @@ export class BoothRepository {
     return prisma.booth.update({ where: { boothId }, data });
   }
 
+  async updateManyBooths(boothIds: number[], data: Prisma.BoothUpdateManyMutationInput) {
+    return prisma.booth.updateMany({
+      where: { boothId: { in: boothIds } },
+      data
+    });
+  }
+
   async softDeleteBooth(boothId: number): Promise<Booth> {
     return prisma.booth.update({ where: { boothId }, data: { deletedAt: new Date() } });
   }

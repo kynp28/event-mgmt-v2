@@ -27,24 +27,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     const controller = new AbortController();
 
     api.get('/auth/me', { signal: controller.signal })
       .then(res => {
-        if (res.data?.data) {
+        if (isMounted && res.data?.data) {
           setUser(res.data.data);
+          setIsLoading(false);
         }
       })
       .catch((error) => {
-        if (error.name !== 'CanceledError') {
+        if (isMounted && error.name !== 'CanceledError') {
           setUser(null);
+          setIsLoading(false);
         }
-      })
-      .finally(() => {
-        setIsLoading(false);
       });
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, []);
 
   const login = (userData: UserPayload) => {

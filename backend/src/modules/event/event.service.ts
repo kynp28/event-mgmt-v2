@@ -43,11 +43,19 @@ export class EventService {
     const available = isEnded ? 0 : (event.booths ? event.booths.filter((b: any) => b.status === 'available' && b.lockState === 'none').length : 0);
     const booked = event.booths ? event.booths.filter((b: any) => b.status === 'booked').length : 0;
     
+    // Calculate starting price
+    let startingPrice = 0;
+    if (event.booths && event.booths.length > 0) {
+      const prices = event.booths.map((b: any) => Number(b.price || 0));
+      startingPrice = Math.min(...prices);
+    }
+    
     const { booths, ...rest } = event;
     return {
       ...rest,
       eventStatus: dynamicStatus,
       isEnded,
+      startingPrice,
       boothStats: { total, available, booked }
     };
   }

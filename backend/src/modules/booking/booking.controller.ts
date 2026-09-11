@@ -14,6 +14,30 @@ export class BookingController {
     res.status(201).json({ message: 'จองบูธสำเร็จ', data: result });
   };
 
+  createBookings = async (req: Request, res: Response) => {
+    const vendorId = req.user!.userId;
+    const { eventId, boothIds } = req.body;
+    
+    const result = await this.bookingService.createBookings(vendorId, eventId, boothIds);
+    res.status(201).json({ message: 'จองบูธสำเร็จ', data: result });
+  };
+
+  holdBooths = async (req: Request, res: Response) => {
+    const vendorId = req.user!.userId;
+    const { eventId, boothIds } = req.body;
+    
+    const result = await this.bookingService.holdBooths(vendorId, eventId, boothIds);
+    res.status(200).json({ message: 'กันบูธสำเร็จ', data: result });
+  };
+
+  releaseBooths = async (req: Request, res: Response) => {
+    const vendorId = req.user!.userId;
+    const { eventId, boothIds } = req.body;
+    
+    const result = await this.bookingService.releaseBooths(vendorId, eventId, boothIds);
+    res.status(200).json({ message: 'ปล่อยบูธสำเร็จ', data: result });
+  };
+
   getMyBookings = async (req: Request, res: Response) => {
     const vendorId = req.user!.userId;
     const result = await this.bookingService.getMyBookings(vendorId);

@@ -2,338 +2,238 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, MapPin, Search, Users, Map, ChevronRight, ShieldCheck } from 'lucide-react';
 import api from '../services/api';
-
-// Swiper imports
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Pagination } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/pagination';
 
 export const Home = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState({ query: '', location: '' });
+  const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
 
-  // Mock Promotional Banners (Doubled to 8 to ensure smooth looping in Swiper)
-  const mockBanners = [
-    { id: 1, imgUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=1200' },
-    { id: 2, imgUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1200' },
-    { id: 3, imgUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=1200' },
-    { id: 4, imgUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200' },
-    { id: 5, imgUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=1200' },
-    { id: 6, imgUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=1200' },
-    { id: 7, imgUrl: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=1200' },
-    { id: 8, imgUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=1200' },
+  // Categories based on designer's prototype
+  const categories = [
+    { id: 'all', label: 'ทั้งหมด' },
+    { id: 'tech', label: 'เทคโนโลยี' },
+    { id: 'food', label: 'อาหาร' },
+    { id: 'music', label: 'ดนตรี' },
+    { id: 'business', label: 'ธุรกิจ' }
   ];
 
-  // Example stats for vendors
-  const benefits = [
-    { icon: Map, title: t('benefit_location_title'), desc: t('benefit_location_desc') },
-    { icon: Users, title: t('benefit_reach_title'), desc: t('benefit_reach_desc') },
-    { icon: ShieldCheck, title: t('benefit_manage_title'), desc: t('benefit_manage_desc') }
-  ];
-
+  // Fetch events from backend
   const { data: events, isLoading } = useQuery({
-    queryKey: ['activeEvents'],
+    queryKey: ['public-events'],
     queryFn: async () => {
       const res = await api.get('/events/active');
       return res.data.data;
     }
   });
 
-  // Handle scrolling to hash when landing on the page from another route
-  useEffect(() => {
-    if (window.location.hash === '#events-section') {
-      // Small timeout to ensure DOM is ready and data might be loading
-      setTimeout(() => {
-        document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
-  }, []);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAppliedSearch({ query: searchQuery, location: selectedLocation });
-    document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const getImageUrl = (imageUrl: string) => {
-    if (!imageUrl) return 'https://images.unsplash.com/photo-1533900298318-6b8da08a523e?auto=format&fit=crop&q=80&w=800';
+  const getImageUrl = (imageUrl: string, eventId: number = 0) => {
+    const placeholders = [
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1511556532299-8f662fc26c06?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1531058020387-3be344556be6?auto=format&fit=crop&q=80&w=800'
+    ];
+    const fallback = placeholders[eventId % placeholders.length];
+    
+    if (!imageUrl || !imageUrl.includes('/') && !imageUrl.startsWith('http')) return fallback;
+    
     try {
       const parsed = JSON.parse(imageUrl);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
       return imageUrl;
     } catch {
-      return imageUrl;
+      if (imageUrl.startsWith('http')) return imageUrl;
+      const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
+      const formattedUrl = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+      return `${baseUrl}${formattedUrl}`;
     }
   };
 
+  // Filter events based on search and category
   const filteredEvents = (events || []).filter((event: any) => {
+    // Exclude ended fairs from homepage showcase unless they specifically search for it
     const isEnded = Boolean(event.isEnded || (event.endDate && new Date(event.endDate) < new Date()) || event.eventStatus === 'ended');
-    if (isEnded) return false; // Hide ended fairs from homepage showcase
+    if (isEnded) return false;
+    
     const name = event.eventName || '';
     const loc = event.location || '';
-    const matchQuery = name.toLowerCase().includes(appliedSearch.query.toLowerCase());
-    const matchLocation = appliedSearch.location ? loc.toLowerCase().includes(appliedSearch.location.toLowerCase()) : true;
-    return matchQuery && matchLocation;
+    const org = event.organizer?.username || '';
+    const cat = event.category || 'default';
+    
+    const matchQuery = 
+      name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      loc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      org.toLowerCase().includes(searchQuery.toLowerCase());
+      
+    // Category match
+    const mapCatIdToLabel = (catId: string) => {
+      const found = categories.find(c => c.id === catId);
+      return found ? found.label : 'ทั้งหมด';
+    };
+    
+    const eventCatLabel = mapCatIdToLabel(cat);
+    const matchCategory = activeCategory === 'ทั้งหมด' || eventCatLabel === activeCategory || cat === activeCategory;
+    
+    return matchQuery && matchCategory;
   });
 
+  const getStatusMap = (status: string, availableStats: number, totalStats: number) => {
+    if (status === 'closed') {
+      return { label: "ปิดจอง", color: "var(--status-closed)", bg: "var(--status-closed-bg)" };
+    }
+    
+    // Check if almost full (less than 15% left or <= 5 booths)
+    const ratio = totalStats > 0 ? availableStats / totalStats : 0;
+    if (status === 'open' && (availableStats <= 5 || ratio < 0.15) && totalStats > 0) {
+      return { label: "ใกล้เต็ม", color: "var(--status-almost-full)", bg: "var(--status-almost-full-bg)" };
+    }
+    
+    return { label: "เปิดจอง", color: "var(--status-open)", bg: "var(--status-open-bg)" };
+  };
+
+  const getCategoryTheme = (cat: string) => {
+    // Mapping db category string to token names
+    const c = (cat || 'default').toLowerCase();
+    const validCats = ['music', 'food', 'tech', 'business'];
+    const theme = validCats.includes(c) ? c : 'default';
+    return {
+      color: `var(--cat-${theme})`,
+      bg: `var(--cat-${theme}-bg)`
+    };
+  };
+
+  const mapCatIdToLabel = (catId: string) => {
+    const found = categories.find(c => c.id === catId);
+    return found ? found.label : (catId || 'ทั่วไป');
+  };
+
   return (
-    <div style={{ backgroundColor: 'var(--bg-dark)' }}>
-      {/* Hero Section */}
-      <div style={{ padding: '6rem 1.5rem', backgroundColor: 'var(--bg-dark)', borderBottom: '1px solid var(--border)' }}>
-        <div className="container" style={{ textAlign: 'center', maxWidth: '800px', padding: '0' }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1.5rem', lineHeight: 1.2 }}>
-            {t('home_title_1')}<span style={{ color: 'var(--primary)' }}>{t('home_title_highlight')}</span>
-          </h1>
-          <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '3rem' }}>
-            {t('home_subtitle')}
-          </p>
+    <>
+      <section className="hero">
+        <h1>งานกำลังจะเริ่มแล้ว <span className="stat">{events?.filter((e: any) => e.eventStatus === 'open').length || 0} อีเวนต์</span> เปิดจองอยู่ตอนนี้</h1>
+        <p>เลือกดูงานอีเวนต์และจองบูธที่คุณสนใจได้จากที่เดียว</p>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '3rem', flexWrap: 'wrap' }}>
-            <Link to="/register" style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '1rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1.125rem', boxShadow: '0 4px 6px -1px var(--primary-glow)', textDecoration: 'none' }}>
-              {t('vendor_register_free')}
-            </Link>
-            <Link to="/login" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border)', padding: '1rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1.125rem', textDecoration: 'none' }}>
-              {t('for_organizer')}
-            </Link>
+        <div className="search-row">
+          <div className="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input 
+              type="text" 
+              placeholder="ค้นหาชื่องาน สถานที่ หรือผู้จัด"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', backgroundColor: 'var(--bg-card)', padding: '0.5rem', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.2)', border: '1px solid var(--border)', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', flex: 2, minWidth: '200px' }}>
-              <Search size={20} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
-              <input 
-                type="text" 
-                placeholder={t('search_fair')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', backgroundColor: 'transparent', color: 'var(--text-main)' }}
-              />
-            </div>
-            <div style={{ width: '1px', backgroundColor: 'var(--border)', margin: '0.5rem 0' }}></div>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '0.5rem 1rem', flex: 1, minWidth: '150px' }}>
-              <MapPin size={20} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
-              <select 
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1rem', backgroundColor: 'transparent', cursor: 'pointer', color: 'var(--text-main)' }}
-              >
-                <option value="" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('all_provinces')}</option>
-                <option value="Bangkok" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('bangkok')}</option>
-                <option value="Buriram" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}>{t('buriram')}</option>
-              </select>
-            </div>
-            <button type="submit" style={{ backgroundColor: 'var(--primary)', color: 'white', border: 'none', padding: '0.75rem 2rem', borderRadius: '8px', fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }}>
-              {t('search')}
-            </button>
-          </form>
+          <button className="filter-btn-mobile">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            ตัวกรอง
+          </button>
         </div>
 
-        {/* Promotional Banner Slider */}
-        <div style={{ marginTop: '4rem', paddingBottom: '2rem' }}>
-          <Swiper
-            modules={[Autoplay]}
-            spaceBetween={20}
-            slidesPerView={1.2}
-            centeredSlides={true}
-            loop={true}
-            speed={12000} // Much slower transition duration for a relaxed ticker
-            autoplay={{
-              delay: 0, // No delay between transitions (continuous)
-              disableOnInteraction: false,
-            }}
-            breakpoints={{
-              640: { slidesPerView: 1.5, spaceBetween: 30 },
-              1024: { slidesPerView: 1.8, spaceBetween: 40 },
-            }}
-            style={{ 
-              width: '100%', 
-              paddingBottom: '3rem'
-            }}
-            className="promo-swiper ticker-mode"
-          >
-            {mockBanners.map(banner => (
-              <SwiperSlide key={banner.id}>
-                <div className="promo-slide-card">
-                  <img 
-                    src={banner.imgUrl} 
-                    alt={`Banner ${banner.id}`} 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
+        <div className="chips">
+          {categories.map(cat => (
+            <div 
+              key={cat.id} 
+              className={`chip ${activeCategory === cat.label || activeCategory === cat.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat.id === 'all' ? 'ทั้งหมด' : cat.id)}
+            >
+              {cat.label}
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Why Choose Us / Benefits for Vendors */}
-      <div style={{ padding: '5rem 1.5rem' }}>
-        <div className="container" style={{ maxWidth: '1000px', padding: '0' }}>
-          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-            <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>{t('why_choose_us')}</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1.125rem' }}>{t('why_choose_subtitle')}</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {benefits.map((b, i) => (
-              <div key={i} className="glass-card" style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
-                <div style={{ width: '64px', height: '64px', backgroundColor: 'var(--primary-glow)', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', color: 'var(--primary)' }}>
-                  <b.icon size={32} />
-                </div>
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem' }}>{b.title}</h3>
-                <p style={{ color: 'var(--text-muted)' }}>{b.desc}</p>
+      <div className="grid-wrap">
+        {isLoading ? (
+          <div className="grid">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="event-card" style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', animation: 'pulse 2s infinite' }}>กำลังโหลดข้อมูล...</span>
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Featured Events */}
-      <div id="events-section" style={{ padding: '5rem 1.5rem', backgroundColor: 'var(--bg-dark)', borderTop: '1px solid var(--border)' }}>
-        <div className="container" style={{ padding: '0' }}>
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>
-                {appliedSearch.query || appliedSearch.location ? t('search_results') : t('open_fairs')}
-              </h2>
-              <p style={{ color: 'var(--text-muted)' }}>
-                {appliedSearch.query || appliedSearch.location 
-                  ? `${t('search_prefix')} "${appliedSearch.query}" ${appliedSearch.location ? `${t('in_province')} ${appliedSearch.location}` : ''} ${t('found_items', { count: filteredEvents.length })}`
-                  : t('invest_in_crowded')
-                }
-              </p>
-            </div>
-            <Link to="/events" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600, textDecoration: 'none' }}>
-              {t('view_all_events')} <ChevronRight size={20} />
-            </Link>
+        ) : filteredEvents.length === 0 ? (
+          <div style={{ padding: '4rem 2rem', textAlign: 'center', backgroundColor: 'var(--bg-elevated)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--border-default)', marginTop: '24px' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '48px', height: '48px', color: 'var(--text-muted)', margin: '0 auto 1rem', opacity: 0.5 }}>
+              <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+            </svg>
+            <h3 style={{ fontSize: '18px', color: 'var(--text-primary)', marginBottom: '8px' }}>ไม่พบงานอีเวนต์</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่ใหม่ดูนะครับ</p>
+            <button 
+              onClick={() => {
+                setSearchQuery('');
+                setActiveCategory('ทั้งหมด');
+              }}
+              style={{ marginTop: '24px', padding: '10px 20px', backgroundColor: 'var(--accent)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
+            >
+              ดูงานทั้งหมด
+            </button>
           </div>
+        ) : (
+          <div className="grid">
+            {filteredEvents.map((event: any) => {
+              const totalStats = event.boothStats?.total || 0;
+              const availableStats = event.boothStats?.available || 0;
+              const bookedStats = event.boothStats?.booked || 0;
+              
+              const s = getStatusMap(event.eventStatus, availableStats, totalStats);
+              const cTheme = getCategoryTheme(event.category);
+              const isFree = event.startingPrice === 0 || event.startingPrice === '0.00';
+              const availRatio = totalStats > 0 ? (bookedStats / totalStats) : 0;
+              
+              const organizerName = event.organizer?.username || 'Event Organizer';
 
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="glass-card" style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: 'var(--text-muted)', animation: 'pulse 2s infinite' }}>{t('loading_data')}</span>
-                </div>
-              ))}
-            </div>
-          ) : filteredEvents.length === 0 ? (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center', backgroundColor: 'var(--bg-card-hover)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
-              <Search size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('no_fairs_found')}</h3>
-              <p style={{ color: 'var(--text-muted)' }}>{t('try_change_search')}</p>
-              <button 
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedLocation('');
-                  setAppliedSearch({ query: '', location: '' });
-                }}
-                style={{ marginTop: '1.5rem', padding: '0.5rem 1.25rem', backgroundColor: 'var(--primary)', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-              >
-                {t('view_all_events')}
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {filteredEvents.map((event: any) => (
-                <div key={event.eventId} className="glass-card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ height: '200px', backgroundColor: 'var(--bg-card-hover)', position: 'relative' }}>
+              return (
+                <Link to={`/events/${event.eventId}`} key={event.eventId} className="event-card">
+                  <div className="card-img-wrap">
                     <img 
-                      src={getImageUrl(event.imageUrl)} 
+                      src={getImageUrl(event.imageUrl, event.eventId)} 
                       alt={event.eventName} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&q=80&w=800'; }}
                     />
-                    <div style={{ position: 'absolute', top: '1rem', right: '1rem', backgroundColor: 'var(--bg-card)', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-main)', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                      {t('open_for_booking')}
+                    <div className="card-badges">
+                      <span className="cat-badge" style={{ background: cTheme.bg, color: cTheme.color }}>
+                        {mapCatIdToLabel(event.category)}
+                      </span>
+                      <span className="status-badge" style={{ background: s.bg, color: s.color }}>
+                        <span className="status-dot" style={{ background: s.color }}></span>
+                        {s.label}
+                      </span>
                     </div>
                   </div>
-                  <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <h3 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', fontWeight: 700, color: 'var(--text-main)' }}>{event.eventName}</h3>
-                    
-                    {event.description && (
-                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {event.description}
-                      </p>
-                    )}
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: event.description ? '0' : '0.5rem', marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        <Calendar size={16} color="var(--primary)" />
-                        {new Date(event.startDate).toLocaleDateString('th-TH')} - {new Date(event.endDate).toLocaleDateString('th-TH')}
+                  <div className="card-body">
+                    <div className="card-title">{event.eventName}</div>
+                    <div className="card-meta">
+                      <div className="meta-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                        {new Date(event.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} – {new Date(event.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        <MapPin size={16} color="var(--danger)" />
-                        {event.location}
+                      <div className="meta-row">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {event.location || 'ไม่ระบุสถานที่'}
                       </div>
                     </div>
-
-                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.875rem', backgroundColor: 'var(--bg-card-hover)', padding: '0.75rem', borderRadius: '8px' }}>
-                        <div style={{ textAlign: 'center', flex: 1 }}>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>ทั้งหมด</div>
-                          <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{event.boothStats?.total ?? 0}</div>
-                        </div>
-                        <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
-                        <div style={{ textAlign: 'center', flex: 1 }}>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>ว่าง</div>
-                          <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{event.boothStats?.available ?? 0}</div>
-                        </div>
-                        <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
-                        <div style={{ textAlign: 'center', flex: 1 }}>
-                          <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>จองแล้ว</div>
-                          <div style={{ fontWeight: 700, color: 'var(--danger)' }}>{event.boothStats?.booked ?? 0}</div>
-                        </div>
+                    <div className="avail-bar">
+                      <div className={`avail-fill ${availRatio > 0.85 ? 'low' : ''}`} style={{ width: `${availRatio * 100}%` }}></div>
+                    </div>
+                    <div className="card-footer">
+                      <div className="organizer">
+                        <span className="organizer-dot">{organizerName.charAt(0).toUpperCase()}</span>
+                        {organizerName}
                       </div>
-                      
-                      <button 
-                        onClick={() => navigate(`/events/${event.eventId}`)}
-                        className="btn btn-primary"
-                        style={{ width: '100%', padding: '0.75rem 1.25rem', borderRadius: '8px', fontWeight: 600 }}
-                      >
-                        {t('view_map_details')}
-                      </button>
+                      <span className={`price ${isFree ? 'free' : ''}`}>
+                        {isFree ? 'ฟรี' : `เริ่ม ฿${Number(event.startingPrice).toLocaleString()}`}
+                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
-
-      {/* Clean Footer */}
-      <footer style={{ backgroundColor: 'var(--bg-dark)', color: 'var(--text-muted)', padding: '4rem 1.5rem 2rem' }}>
-        <div className="container" style={{ padding: 0 }}>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div style={{ gridColumn: 'span 2' }}>
-              <h3 style={{ color: 'var(--text-main)', fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>EventCore</h3>
-              <p style={{ maxWidth: '300px', marginBottom: '1.5rem' }}>{t('footer_desc')}</p>
-            </div>
-            <div>
-              <h4 style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '1.25rem' }}>{t('for_vendors')}</h4>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><Link to="/events" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t('search_fair')}</Link></li>
-                <li><Link to="/register" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{t('how_to_book')}</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 style={{ color: 'var(--text-main)', fontWeight: 600, marginBottom: '1.25rem' }}>{t('help_support')}</h4>
-              <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <li><span style={{ color: 'var(--text-muted)' }}>support@eventcore.com</span></li>
-                <li><span style={{ color: 'var(--text-muted)' }}>02-xxx-xxxx</span></li>
-              </ul>
-            </div>
-          </div>
-          <div style={{ paddingTop: '2rem', borderTop: '1px solid var(--border)', textAlign: 'center', fontSize: '0.875rem' }}>
-            © 2026 EventCore. All rights reserved.
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 };
