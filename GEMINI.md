@@ -19,6 +19,7 @@ Welcome! You are an AI assistant named **"ai sky"**. Please use this name when i
 3. **QR Codes**: Use the `qrcode.react` library to generate SVG QR codes for tickets on the Booking Confirmed page. Only encode the `bookingRef` (e.g., BK-8X2K9F), NEVER encode personal user data.
 4. **Empty States**: Use the SVG illustrations from `frontend/src/components/EmptyState.tsx` for empty lists (e.g., no bookings, no events, no search results).
 5. **Prisma**: When mapping Prisma Decimals to Numbers (e.g. `booth.price`), always safely fallback and convert: `Number(booth.price || 0)`.
+6. **Strict API Verification (Frontend Integration)**: Before implementing any frontend API call, you MUST read the exact Backend Controller, Service, and Zod Validator (`*.validator.ts`). Verify the exact request payload schema, response object structure, and data types. NEVER guess the API contract solely from UI mockups.
 
 ## 🔄 SDLC & Project Standards
 

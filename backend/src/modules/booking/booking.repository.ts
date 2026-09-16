@@ -33,7 +33,7 @@ export class BookingRepository {
               version = version + 1
           WHERE booth_id = ${boothId} 
             AND status = 'available' 
-            AND lock_state = 'none'
+            AND (lock_state = 'none' OR (lock_state = 'payment_pending' AND locked_by_user_id = ${vendorId}))
         `;
 
         if (affectedRows === 0) {

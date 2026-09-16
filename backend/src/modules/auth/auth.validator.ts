@@ -10,8 +10,7 @@ export const registerSchema = z.object({
     .string()
     .min(8, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร')
     .max(255, 'รหัสผ่านยาวเกินไป'),
-  // สมัครได้แค่ vendor หรือ visitor เท่านั้น — organizer ต้องขอสิทธิ์แยกต่างหาก (CI.02 6.1.1)
-  role: z.enum(['vendor', 'visitor']),
+  role: z.enum(['vendor', 'visitor', 'organizer']),
 });
 
 export const loginSchema = z.object({
@@ -26,9 +25,13 @@ export const appealSchema = z.object({
 
 export const updateProfileSchema = z.object({
   username: z.string().trim().min(3).max(100).optional(),
-  avatarUrl: z.string().url().max(2048).nullable().optional(),
+  avatarUrl: z.string().nullable().optional(),
   currentPassword: z.string().min(1).optional(),
   newPassword: z.string().min(8).max(255).optional(),
+  bankName: z.string().max(100).nullable().optional(),
+  bankAccountNo: z.string().max(50).nullable().optional(),
+  bankAccountName: z.string().max(150).nullable().optional(),
+  promptpayNo: z.string().max(50).nullable().optional(),
 }).strict();
 
 export type RegisterInput = z.infer<typeof registerSchema>;

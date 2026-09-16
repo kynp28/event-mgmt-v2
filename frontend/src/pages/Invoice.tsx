@@ -138,65 +138,19 @@ export const Invoice = () => {
         </div>
       </div>
 
-      {/* Document View or Empty State */}
-      {invoiceUrl ? (
-        <div className="glass-card invoice-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: 'var(--bg-card)' }}>
-          {isPdf ? (
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ width: '100%', height: '750px', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'white' }}>
-                <iframe 
-                  src={invoiceUrl} 
-                  title="Organizer Invoice PDF" 
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                />
-              </div>
-              <div className="no-print" style={{ marginTop: '1rem', textAlign: 'center' }}>
-                <a href={invoiceUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', textDecoration: 'none' }}>
-                  <ExternalLink size={16} /> หาก PDF ไม่แสดง คลิกที่นี่เพื่อเปิดในแท็บใหม่
-                </a>
-              </div>
-            </div>
-          ) : (
+      {/* Vendor's Uploaded Slip */}
+        {booking.payment?.slipImage && (
+          <div className="glass-card invoice-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: 'var(--bg-card)', marginTop: '2rem' }}>
+            <h3 style={{ marginBottom: '1.5rem', alignSelf: 'flex-start', color: 'var(--text-main)' }}>สลิปชำระเงินของคุณ</h3>
             <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-              <img 
-                src={invoiceUrl} 
-                alt="Organizer Invoice" 
-                style={{ maxWidth: '100%', maxHeight: '800px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} 
-              />
+              <img src={booking.payment.slipImage} alt="Your Payment Slip" style={{ maxWidth: '100%', maxHeight: '600px', objectFit: 'contain', borderRadius: '8px', border: '1px solid var(--border)', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }} />
             </div>
-          )}
-        </div>
-      ) : (
-        /* Empty State: Organizer hasn't uploaded invoice yet */
-        <div className="glass-card" style={{ padding: '4rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--bg-card-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem' }}>
-            <Clock size={32} color="var(--warning)" />
+            {booking.payment.status === 'pending' && (
+              <p style={{ marginTop: '1rem', color: 'var(--warning)', fontWeight: 600 }}>กำลังรอผู้จัดงานตรวจสอบสลิป</p>
+            )}
           </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-            รอผู้จัดงานอัปโหลดใบแจ้งหนี้
-          </h2>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '450px', lineHeight: 1.6, margin: '0 auto 2rem auto', fontSize: '0.95rem' }}>
-            ผู้จัดงาน (Organizer) ยังไม่ได้แนบไฟล์ใบแจ้งหนี้หรือใบเสร็จรับเงินสำหรับอีเวนต์นี้ เมื่อผู้จัดงานอัปโหลดแล้ว คุณจะสามารถดูและดาวน์โหลดเอกสารได้จากหน้านี้
-          </p>
+        )}
 
-          <div style={{ backgroundColor: 'var(--bg-card-hover)', padding: '1.25rem 2rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'inline-flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left', minWidth: '280px' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>หมายเลขบูธ:</span>
-              <strong style={{ color: 'var(--text-main)' }}>{booking.booth?.boothNo}</strong>
-            </div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>ยอดเงิน:</span>
-              <strong style={{ color: 'var(--primary)' }}>฿{Number(booking.totalAmount).toLocaleString()}</strong>
-            </div>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-              <span>สถานะ:</span>
-              <strong style={{ color: booking.status === 'confirmed' ? 'var(--success)' : 'var(--warning)' }}>
-                {booking.status === 'confirmed' ? 'ยืนยันแล้ว' : 'รอตรวจสอบ'}
-              </strong>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

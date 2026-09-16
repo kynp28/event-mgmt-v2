@@ -112,10 +112,10 @@ export const Navbar = () => {
 
         <div className="nav-actions-wrapper flex gap-4 items-center" style={{ whiteSpace: 'nowrap', flex: 1, justifyContent: 'flex-end' }}>
           {isAuthenticated ? (
-            <>
-              {user?.roles.includes('admin') && <Link to="/admin" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('admin_dashboard')}</Link>}
-              {user?.roles.includes('organizer') && <Link to="/organizer" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('organizer_dashboard')}</Link>}
-              {user?.roles.includes('vendor') && <Link to="/vendor" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('my_bookings')}</Link>}
+              <>
+                {user?.roles?.includes('admin') && <Link to="/admin" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('admin_dashboard')}</Link>}
+                {user?.roles?.includes('organizer') && <Link to="/organizer" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('organizer_dashboard')}</Link>}
+                {user?.roles?.includes('vendor') && <Link to="/vendor" className="nav-item" onClick={() => setIsMenuOpen(false)} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{t('my_bookings')}</Link>}
               
               <div className="user-profile-wrapper flex items-center gap-3" style={{ marginLeft: '1rem', paddingLeft: '1rem', borderLeft: '1px solid var(--border)' }}>
                 <Link to="/settings" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'var(--text-main)' }}>
@@ -127,7 +127,7 @@ export const Navbar = () => {
                     )}
                   </div>
                   <span className="text-sm font-semibold" style={{ color: 'var(--text-main)' }}>
-                    {user?.username || getRoleDisplayName(user?.roles[0] || '')}
+                    {user?.username || getRoleDisplayName(user?.roles?.[0] || '')}
                   </span>
                 </Link>
                 <button onClick={handleLogout} className="btn btn-secondary flex items-center" title="ออกจากระบบ" style={{ backgroundColor: 'transparent', border: 'none', color: 'var(--text-muted)', padding: '0.25rem' }}>

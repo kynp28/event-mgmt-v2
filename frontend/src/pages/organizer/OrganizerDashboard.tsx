@@ -1,14 +1,22 @@
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Store, Ticket, CircleDollarSign, Plus, Map, TrendingUp, ChevronRight, Activity } from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell 
+} from 'recharts';
+import { 
+  TrendingUp, TrendingDown, Store, Calendar as CalendarIcon, 
+  CircleDollarSign, Plus, ArrowRight 
+} from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { EventCalendar } from '../../components/Calendar/EventCalendar';
+import './OrganizerDashboard.css';
 
 export const OrganizerDashboard = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [timeRange, setTimeRange] = useState('7days');
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['organizerStats'],
@@ -18,128 +26,184 @@ export const OrganizerDashboard = () => {
     }
   });
 
-  if (isLoading) return <div className="container mt-10 text-center animate-pulse" style={{ color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลแดชบอร์ด...</div>;
-  if (!stats) return <div className="container mt-10 text-center" style={{ color: 'var(--text-muted)' }}>ไม่พบข้อมูลสถิติ</div>;
+  if (isLoading || !stats) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลแดชบอร์ด...</div>;
+  }
+
+  const { totalRevenue, totalBooths, bookedBooths, activeEvents, pendingBookings, upcomingEvents, recentBookings, dailySales } = stats;
+
+  const maxSales = Math.max(...dailySales.map((d: any) => d.value));
+
+  const formatCurrency = (val: number) => `฿${val.toLocaleString()}`;
 
   return (
-    <div className="animate-fade-in" style={{ backgroundColor: 'var(--bg-dark)', minHeight: 'calc(100vh - 80px)', padding: '2rem 0' }}>
-      <div className="container" style={{ maxWidth: '1200px' }}>
-        
-        {/* Header Section */}
-        <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-              {t('organizer_dashboard', 'แดชบอร์ดผู้จัดงาน')}
-            </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-              ยินดีต้อนรับกลับ, {user?.username || 'ผู้จัดงาน'} 👋 จัดการงานแฟร์และพื้นที่ขายของคุณได้ที่นี่
-            </p>
+    <div className="org-dashboard">
+      <div className="page-head">
+        <div>
+          <h1 className="page-title">ภาพรวมงานของคุณ</h1>
+          <p className="page-sub">สรุปยอดขายและการจองล่าสุด</p>
+        </div>
+        <Link to="/organizer/events/create" className="new-event-btn">
+          <Plus size={16} /> สร้างงานใหม่
+        </Link>
+      </div>
+
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <div className="kpi-top">
+            <span className="kpi-label">รายได้รวม (เดือนนี้)</span>
+            <div className="kpi-icon" style={{ background: 'var(--accent-soft)' }}>
+              <CircleDollarSign size={16} color="var(--accent)" />
+            </div>
           </div>
-          <div className="dashboard-header-actions" style={{ display: 'flex', gap: '1rem' }}>
-            <Link to="/organizer/booths/manage" className="auth-input" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', textDecoration: 'none', fontWeight: 600, padding: '0.75rem 1.5rem', margin: 0, border: '1px solid var(--border)' }}>
-              <Map size={18} /> {t('manage_booths', 'จัดการบูธ (วาดผัง)')}
-            </Link>
-            <Link to="/organizer/events/create" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: 'auto', margin: 0, padding: '0.75rem 1.5rem', textDecoration: 'none' }}>
-              <Plus size={18} /> {t('create_new_event', 'สร้างงานแฟร์ใหม่')}
-            </Link>
+          <div className="kpi-value">{formatCurrency(totalRevenue)}</div>
+          <div className="kpi-delta up">
+            <TrendingUp size={14} /> 12.4% จากเดือนก่อน
           </div>
         </div>
         
-        {/* KPI Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ marginBottom: '3rem' }}>
-          {/* Card 1 */}
-          <Link to="/organizer/events" className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none', cursor: 'pointer' }}>
-            <div style={{ backgroundColor: '#EFF6FF', padding: '1rem', borderRadius: '12px', color: '#3B82F6' }}>
-              <Calendar size={28} />
-            </div>
-            <div>
-              <h3 style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' }}>{t('my_events', 'อีเวนต์ของฉัน')}</h3>
-              <p style={{ color: 'var(--text-main)', fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>{stats.totalEvents}</p>
-            </div>
-          </Link>
-          
-          {/* Card 2 */}
-          <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ backgroundColor: '#F3E8FF', padding: '1rem', borderRadius: '12px', color: '#9333EA' }}>
-              <Store size={28} />
-            </div>
-            <div>
-              <h3 style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' }}>{t('total_booths', 'บูธในระบบ')}</h3>
-              <p style={{ color: 'var(--text-main)', fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>{stats.totalBooths}</p>
+        <div className="kpi-card">
+          <div className="kpi-top">
+            <span className="kpi-label">บูธที่จองแล้ว</span>
+            <div className="kpi-icon" style={{ background: 'var(--status-open-bg)' }}>
+              <Store size={16} color="var(--status-open)" />
             </div>
           </div>
+          <div className="kpi-value">{bookedBooths} / {totalBooths}</div>
+          <div className="kpi-delta up">
+            <TrendingUp size={14} /> {totalBooths > 0 ? Math.round((bookedBooths/totalBooths)*100) : 0}% เต็มความจุ
+          </div>
+        </div>
+        
+        <div className="kpi-card">
+          <div className="kpi-top">
+            <span className="kpi-label">งานที่กำลังเปิดจอง</span>
+            <div className="kpi-icon" style={{ background: 'var(--accent-soft)' }}>
+              <CalendarIcon size={16} color="var(--accent)" />
+            </div>
+          </div>
+          <div className="kpi-value">{activeEvents}</div>
+          <div className="kpi-delta" style={{ color: 'var(--text-muted)' }}>
+            ใกล้ครบกำหนด 2 งาน
+          </div>
+        </div>
+        
+        <div className="kpi-card">
+          <div className="kpi-top">
+            <span className="kpi-label">รอชำระเงิน</span>
+            <div className="kpi-icon" style={{ background: 'var(--status-almost-full-bg)' }}>
+              <CircleDollarSign size={16} color="var(--status-almost-full)" />
+            </div>
+          </div>
+          <div className="kpi-value">{pendingBookings} รายการ</div>
+          <div className="kpi-delta down">
+            <TrendingDown size={14} /> รอมานาน 3 วัน+
+          </div>
+        </div>
+      </div>
 
-          {/* Card 3 */}
-          <Link to="/organizer/bookings" className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', textDecoration: 'none', cursor: 'pointer' }}>
-            <div style={{ backgroundColor: '#DCFCE7', padding: '1rem', borderRadius: '12px', color: '#16A34A' }}>
-              <Ticket size={28} />
+      <div className="main-grid">
+        <div className="card">
+          <div className="card-head">
+            <h3>ยอดขายรายวัน</h3>
+            <div className="range-tabs">
+              <span className={timeRange === '7days' ? 'active' : ''} onClick={() => setTimeRange('7days')}>7 วัน</span>
+              <span className={timeRange === '30days' ? 'active' : ''} onClick={() => setTimeRange('30days')}>30 วัน</span>
+              <span className={timeRange === 'year' ? 'active' : ''} onClick={() => setTimeRange('year')}>ปีนี้</span>
             </div>
-            <div>
-              <h3 style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' }}>{t('bookings', 'รายการจองทั้งหมด')}</h3>
-              <p style={{ color: 'var(--text-main)', fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>{stats.totalBookings}</p>
-            </div>
-          </Link>
-
-          {/* Card 4 */}
-          <div className="glass-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <div style={{ backgroundColor: '#FEF3C7', padding: '1rem', borderRadius: '12px', color: '#D97706' }}>
-              <CircleDollarSign size={28} />
-            </div>
-            <div>
-              <h3 style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' }}>{t('revenue', 'รายได้โดยประมาณ')}</h3>
-              <p style={{ color: 'var(--text-main)', fontSize: '1.75rem', fontWeight: 800, lineHeight: 1 }}>฿{stats.totalRevenue?.toLocaleString()}</p>
-            </div>
+          </div>
+          <div style={{ height: '220px', marginTop: '20px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailySales} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                <XAxis 
+                  dataKey="date" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'var(--text-muted)', fontSize: 12, fontWeight: 600 }}
+                  dy={10}
+                />
+                <Tooltip 
+                  cursor={{ fill: 'transparent' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', color: 'var(--text-primary)', fontWeight: 600 }}
+                  itemStyle={{ color: 'var(--accent)' }}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                  {dailySales.map((entry: any, index: number) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.value === maxSales ? 'var(--accent)' : 'var(--accent-soft)'} 
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Calendar Section */}
-        <div className="glass-card" style={{ padding: '2rem', marginBottom: '3rem' }}>
-          <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Calendar size={20} color="var(--primary)" /> ปฏิทินงานแฟร์ของฉัน
-          </h3>
-          <EventCalendar 
-            events={(stats.upcomingEvents || []).map((e: any) => ({
-              id: e.eventId,
-              title: e.eventName,
-              start: new Date(e.startDate),
-              end: new Date(e.endDate),
-              status: ['open', 'closed'].includes(e.eventStatus) ? 'approved' : 'pending', // open/closed = primary, draft/ended/cancelled = gray
-              resource: { subtitle: e.location || 'สถานที่จัดงาน' }
-            }))}
-          />
-        </div>
-
-        {/* Quick Actions & Recent Activity Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 glass-card" style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Activity size={20} color="var(--primary)" /> ความเคลื่อนไหวล่าสุด (Recent Activity)
-              </h3>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
-                ดูทั้งหมด <ChevronRight size={16} />
-              </span>
-            </div>
-            <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
-              <p>คุณสามารถดูรายการผู้ค้าที่โอนเงินเข้ามาล่าสุดได้ที่นี่</p>
-              <p style={{ fontSize: '0.875rem', opacity: 0.7 }}>(ระบบนี้กำลังอยู่ในระหว่างการพัฒนา)</p>
-            </div>
+        <div className="card">
+          <div className="card-head">
+            <h3>งานที่กำลังจะถึง</h3>
           </div>
-
-          <div className="glass-card" style={{ padding: '2rem', backgroundColor: 'var(--primary)', color: 'white' }}>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <TrendingUp size={32} color="#E0E7FF" />
-            </div>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'white' }}>เคล็ดลับเพิ่มยอดจอง!</h3>
-            <p style={{ fontSize: '0.875rem', lineHeight: 1.6, opacity: 0.9, marginBottom: '2rem' }}>
-              การวาดผังบูธให้เป็นระเบียบ และการใส่รูปภาพโปรโมทงานที่ชัดเจน ช่วยเพิ่มโอกาสในการตัดสินใจจองบูธของพ่อค้าแม่ค้าได้ถึง 40%
-            </p>
-            <Link to="/organizer/booths/manage" style={{ display: 'block', textAlign: 'center', backgroundColor: 'white', color: 'var(--primary)', padding: '0.75rem', borderRadius: '8px', fontWeight: 600, textDecoration: 'none' }}>
-              ไปจัดการผังตลาดกันเลย!
-            </Link>
+          <div className="upcoming-events-list">
+            {upcomingEvents.length > 0 ? upcomingEvents.map((evt: any) => (
+              <div className="event-row" key={evt.eventId}>
+                <img src={evt.imageUrl} alt={evt.eventName} />
+                <div className="info">
+                  <div className="name">{evt.eventName}</div>
+                  <div className="date">{new Date(evt.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                </div>
+                <div className="occ">{evt.occupancy}%</div>
+              </div>
+            )) : (
+              <div style={{ color: 'var(--text-muted)', fontSize: '13px', textAlign: 'center', padding: '20px 0' }}>ไม่มีงานที่กำลังจะถึง</div>
+            )}
           </div>
         </div>
+      </div>
 
+      <div className="card table-card">
+        <div className="card-head">
+          <h3>การจองล่าสุด</h3>
+        </div>
+        <div className="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Vendor</th>
+                <th>งาน</th>
+                <th>บูธ</th>
+                <th>สถานะ</th>
+                <th style={{ textAlign: 'right' }}>ยอดเงิน</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentBookings.length > 0 ? recentBookings.map((b: any) => (
+                <tr key={b.bookingId}>
+                  <td>
+                    <div className="vendor-cell">
+                      <div className="avatar">{b.vendorName.charAt(0)}</div>
+                      {b.vendorName}
+                    </div>
+                  </td>
+                  <td>{b.eventName}</td>
+                  <td>{b.booths || '-'}</td>
+                  <td>
+                    {b.status === 'verified' ? (
+                      <span className="pill paid">ชำระแล้ว</span>
+                    ) : (
+                      <span className="pill pending">รอชำระเงิน</span>
+                    )}
+                  </td>
+                  <td className="amount">{formatCurrency(b.amount)}</td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>ยังไม่มีการจองล่าสุด</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

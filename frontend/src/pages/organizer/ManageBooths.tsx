@@ -1,62 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Draggable from 'react-draggable';
-import { useRef } from 'react';
-import { Trash2, Save, X, Edit, Plus } from 'lucide-react';
+import { Rnd } from 'react-rnd';
+import { Trash2, Save, X, Edit, Plus, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
 import api from '../../services/api';
+import { EmptyState } from '../../components/EmptyState';
 
-const DraggableBooth = ({ booth, onStop, onClick, setHoveredBooth }: any) => {
-  const nodeRef = useRef(null);
-  const isDragging = useRef(false);
+const GRID_SIZE = 20;
+const PX_PER_METER = 40;
 
-  return (
-    <Draggable
-      nodeRef={nodeRef}
-      key={booth.boothId}
-      defaultPosition={{ x: booth.posX || 0, y: booth.posY || 0 }}
-      grid={[20, 20]}
-      onStart={() => { isDragging.current = false; }}
-      onDrag={() => { isDragging.current = true; }}
-      onStop={(e, data) => {
-        onStop(e, data, booth.boothId);
-        setTimeout(() => { isDragging.current = false; }, 100);
-      }}
-      bounds="parent"
-    >
-      <div 
-        ref={nodeRef}
-        onClick={(e) => {
-          if (!isDragging.current) {
-            onClick(booth);
-          }
-        }}
-        onMouseEnter={() => {
-          if (setHoveredBooth) setHoveredBooth(booth);
-        }}
-        onMouseLeave={() => {
-          if (setHoveredBooth) setHoveredBooth(null);
-        }}
-        className="cursor-move flex flex-col items-center justify-center text-xs font-semibold transition-colors hover:brightness-95"
-        style={{ 
-          position: 'absolute', 
-          width: `${booth.width || 80}px`, 
-          height: `${booth.height || 60}px`, 
-          backgroundColor: booth.status === 'booked' ? 'rgba(249, 115, 22, 0.15)' : (booth.zone?.color ? `${booth.zone.color}20` : 'rgba(59, 130, 246, 0.15)'),
-          borderRadius: '6px',
-          color: booth.status === 'booked' ? '#fb923c' : (booth.zone?.color || '#60a5fa'),
-          border: '1px solid',
-          borderColor: booth.status === 'booked' ? 'rgba(249, 115, 22, 0.4)' : (booth.zone?.color ? `${booth.zone.color}80` : 'rgba(59, 130, 246, 0.4)'),
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          backdropFilter: 'blur(4px)'
-        }}
-      >
-        <span className="truncate w-full px-1 text-center leading-tight">{booth.boothNo}</span>
-        {booth.price && <span className="text-[10px] opacity-70 leading-tight">฿{booth.price}</span>}
-      </div>
-    </Draggable>
-  );
+const PRESET_COLORS = [
+  '#ec4899', // Pink
+  '#8b5cf6', // Purple
+  '#3b82f6', // Blue
+  '#14b8a6', // Teal
+  '#10b981', // Green
+  '#f59e0b', // Amber
+  '#f43f5e'  // Rose
+];
+
+const AABBOverlap = (a: any, b: any) => {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 };
 
 export const ManageBooths: React.FC = () => {
@@ -65,12 +30,22 @@ export const ManageBooths: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialEventId = searchParams.get('eventId') ? Number(searchParams.get('eventId')) : '';
   const [selectedEventId, setSelectedEventId] = useState<number | ''>(initialEventId);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showZoneModal, setShowZoneModal] = useState(false);
-  const [newBooth, setNewBooth] = useState({ boothNo: '', price: '', zoneId: '' });
-  const [newZone, setNewZone] = useState({ zoneName: '', color: '#3b82f6' });
-  const [editingBooth, setEditingBooth] = useState<any>(null);
+  const [newZone, setNewZone] = useState({ zoneName: '', color: PRESET_COLORS[0] });
+  const [editingBoothId, setEditingBoothId] = useState<number | null>(null);
   const [hoveredBooth, setHoveredBooth] = useState<any | null>(null);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Hybrid Sync State
+  const [draftBooths, setDraftBooths] = useState<any[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isTableEditing, setIsTableEditing] = useState(false);
+  
+  const draftKey = `draftBooths_event_${selectedEventId}`;
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
 
   const { data: myEvents } = useQuery({
     queryKey: ['myEvents'],
@@ -78,15 +53,6 @@ export const ManageBooths: React.FC = () => {
       const res = await api.get('/events/organizer/my-events');
       return res.data.data;
     }
-  });
-
-  const { data: booths, isLoading: isLoadingBooths } = useQuery({
-    queryKey: ['eventBooths', selectedEventId],
-    queryFn: async () => {
-      const res = await api.get(`/layout/events/${selectedEventId}/booths`);
-      return res.data.data;
-    },
-    enabled: !!selectedEventId
   });
 
   const { data: zones, isLoading: isLoadingZones } = useQuery({
@@ -98,372 +64,521 @@ export const ManageBooths: React.FC = () => {
     enabled: !!selectedEventId
   });
 
-  const updateBoothPosition = useMutation({
-    mutationFn: async ({ id, x, y }: { id: number, x: number, y: number }) => {
-      await api.patch(`/layout/booths/${id}`, { posX: x, posY: y });
+  const { data: booths, isLoading: isLoadingBooths } = useQuery({
+    queryKey: ['eventBooths', selectedEventId],
+    queryFn: async () => {
+      const res = await api.get(`/layout/events/${selectedEventId}/booths`);
+      return res.data.data;
     },
-    onSuccess: () => {
-      // Invalidate or optimistic update
-      queryClient.invalidateQueries({ queryKey: ['eventBooths', selectedEventId] });
-    }
+    enabled: !!selectedEventId
   });
 
-  const handleDragStop = (e: any, data: any, boothId: number) => {
-    updateBoothPosition.mutate({ id: boothId, x: data.x, y: data.y });
+  // Load from API or Draft
+  useEffect(() => {
+    if (booths && selectedEventId) {
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        if (window.confirm('พบแบบร่างที่ยังไม่ได้บันทึก ต้องการกู้คืนไหม?')) {
+          setDraftBooths(JSON.parse(savedDraft));
+          setHasUnsavedChanges(true);
+          return;
+        } else {
+          localStorage.removeItem(draftKey);
+        }
+      }
+      
+      const mappedBooths = booths.map((b: any) => ({
+        ...b,
+        x: b.posX || 0,
+        y: b.posY || 0,
+        w: b.width || 80,
+        h: b.height || 80,
+        hasCollision: false,
+        tempData: null
+      }));
+      setDraftBooths(mappedBooths);
+      setHasUnsavedChanges(false);
+    } else {
+      setDraftBooths([]);
+      setHasUnsavedChanges(false);
+      setEditingBoothId(null);
+    }
+  }, [booths, selectedEventId]);
+
+  // Persist draft on change
+  useEffect(() => {
+    if (hasUnsavedChanges && draftBooths.length > 0 && selectedEventId) {
+      localStorage.setItem(draftKey, JSON.stringify(draftBooths));
+    } else if (!hasUnsavedChanges) {
+      localStorage.removeItem(draftKey);
+    }
+  }, [draftBooths, hasUnsavedChanges, selectedEventId]);
+
+  // Warn on leave
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // --- Auto-numbering Helper ---
+  const generateNextBoothNo = () => {
+    let highestNum = 0;
+    let prefix = 'A';
+    draftBooths.forEach(b => {
+      const match = b.boothNo.match(/^([a-zA-Z]+)-?(\d+)$/);
+      if (match) {
+        prefix = match[1];
+        const num = parseInt(match[2], 10);
+        if (num > highestNum) highestNum = num;
+      }
+    });
+    return `${prefix}${String(highestNum + 1).padStart(2, '0')}`;
   };
 
-  const updateBooth = useMutation({
-    mutationFn: async () => {
-      await api.patch(`/layout/booths/${editingBooth.boothId}`, {
-        boothNo: editingBooth.boothNo,
-        price: Number(editingBooth.price),
-        zoneId: editingBooth.zoneId ? Number(editingBooth.zoneId) : null
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eventBooths', selectedEventId] });
-      setEditingBooth(null);
-    },
-    onError: (error: any) => {
-      alert(error.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-    }
-  });
+  // --- Palette Drag Drop ---
+  const handleAddBooth = (widthPx: number, heightPx: number) => {
+    const newId = Date.now(); // Temp ID for new booths
+    const boothNo = generateNextBoothNo();
+    setDraftBooths(prev => [...prev, {
+      boothId: newId,
+      eventId: selectedEventId,
+      boothNo,
+      price: 500,
+      status: 'available',
+      x: 50,
+      y: 50,
+      w: widthPx,
+      h: heightPx,
+      hasCollision: false,
+      isNew: true
+    }]);
+    setHasUnsavedChanges(true);
+    setEditingBoothId(newId);
+  };
 
-  const deleteBooth = useMutation({
-    mutationFn: async () => {
-      await api.delete(`/layout/booths/${editingBooth.boothId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eventBooths', selectedEventId] });
-      setEditingBooth(null);
-    }
-  });
+  // --- Collision & RND Handlers ---
+  const updateBoothState = (id: number, updates: any) => {
+    setDraftBooths(prev => prev.map(b => b.boothId === id ? { ...b, ...updates } : b));
+    setHasUnsavedChanges(true);
+  };
 
-  const createBooth = useMutation({
-    mutationFn: async (boothData: { boothNo: string; price: string; zoneId: string }) => {
-      await api.post('/layout/booths', {
-        eventId: selectedEventId,
-        boothNo: boothData.boothNo,
-        price: Number(boothData.price),
-        zoneId: boothData.zoneId ? Number(boothData.zoneId) : undefined,
-        status: 'available',
-        posX: 50,
-        posY: 50
-      });
+  const handleDragStart = (id: number) => {
+    setDraftBooths(prev => prev.map(b => b.boothId === id ? { ...b, tempData: { x: b.x, y: b.y, w: b.w, h: b.h } } : b));
+  };
+
+  const handleDragOrResize = (id: number, newX: number, newY: number, newW: number, newH: number) => {
+    if (isTableEditing) return; 
+    const current = draftBooths.find(b => b.boothId === id);
+    if (!current) return;
+
+    const me = { x: newX, y: newY, w: newW, h: newH };
+    const hasCol = draftBooths.some(b => b.boothId !== id && AABBOverlap(me, { x: b.x, y: b.y, w: b.w, h: b.h }));
+
+    updateBoothState(id, { x: newX, y: newY, w: newW, h: newH, hasCollision: hasCol });
+  };
+
+  const handleDragOrResizeStop = (id: number) => {
+    setDraftBooths(prev => prev.map(b => {
+      if (b.boothId === id) {
+        if (b.hasCollision && b.tempData) {
+          showToast('ตำแหน่งนี้ชนกับบูธอื่น (ถูกดึงกลับ)');
+          return { ...b, x: b.tempData.x, y: b.tempData.y, w: b.tempData.w, h: b.tempData.h, hasCollision: false, tempData: null };
+        }
+        return { ...b, hasCollision: false, tempData: null };
+      }
+      return b;
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  // --- Save / API ---
+  const saveFloorplan = useMutation({
+    mutationFn: async () => {
+      const originalIds = booths?.map((b:any) => b.boothId) || [];
+      const currentIds = draftBooths.map(b => b.boothId);
+      
+      const toDelete = originalIds.filter((id:any) => !currentIds.includes(id));
+      const toCreate = draftBooths.filter(b => b.isNew);
+      const toUpdate = draftBooths.filter(b => !b.isNew);
+
+      for (const id of toDelete) await api.delete(`/layout/booths/${id}`);
+      for (const b of toCreate) {
+        await api.post('/layout/booths', {
+          eventId: selectedEventId,
+          boothNo: b.boothNo,
+          price: Number(b.price || 0),
+          zoneId: b.zoneId ? Number(b.zoneId) : undefined,
+          status: 'available',
+          posX: b.x,
+          posY: b.y,
+          width: b.w,
+          height: b.h
+        });
+      }
+      for (const b of toUpdate) {
+        await api.patch(`/layout/booths/${b.boothId}`, {
+          boothNo: b.boothNo,
+          price: Number(b.price || 0),
+          zoneId: b.zoneId ? Number(b.zoneId) : null,
+          posX: b.x,
+          posY: b.y,
+          width: b.w,
+          height: b.h
+        });
+      }
     },
     onSuccess: () => {
+      setHasUnsavedChanges(false);
+      localStorage.removeItem(draftKey);
       queryClient.invalidateQueries({ queryKey: ['eventBooths', selectedEventId] });
-      setShowAddModal(false);
-      setNewBooth({ boothNo: '', price: '', zoneId: '' });
+      alert('บันทึกแผนผังเรียบร้อยแล้ว');
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก');
     }
   });
 
   const createZone = useMutation({
     mutationFn: async () => {
-      await api.post('/layout/zones', {
-        eventId: selectedEventId,
-        zoneName: newZone.zoneName,
-        color: newZone.color
-      });
+      await api.post('/layout/zones', { eventId: selectedEventId, zoneName: newZone.zoneName, color: newZone.color });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['eventZones', selectedEventId] });
-      setNewZone({ zoneName: '', color: '#3b82f6' });
+      setNewZone({ zoneName: '', color: PRESET_COLORS[0] });
     }
   });
 
-  const deleteZone = useMutation({
-    mutationFn: async (id: number) => {
-      await api.delete(`/layout/zones/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eventZones', selectedEventId] });
+  const handleDiscard = () => {
+    if (window.confirm('คุณแน่ใจหรือไม่ที่จะยกเลิกการแก้ไขทั้งหมดและเริ่มใหม่?')) {
+      localStorage.removeItem(draftKey);
+      window.location.reload();
     }
-  });
+  };
+
+  const editingBooth = draftBooths.find(b => b.boothId === editingBoothId);
+
+  
+  const selectedEvent = myEvents?.find((e: any) => e.eventId === selectedEventId);
+  const eventName = selectedEvent ? selectedEvent.eventName : 'เลือกอีเวนต์เพื่อเริ่ม';
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 3rem)', width: '100%', backgroundColor: 'var(--bg-dark)', overflow: 'hidden', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 2rem)', width: '100%', backgroundColor: 'var(--bg-main)', overflow: 'hidden', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
       
-      {/* Left Sidebar: Tools & Zones */}
-      <div style={{ width: '288px', backgroundColor: 'var(--bg-card)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 10 }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-card-hover)' }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>จัดการผังบูธ</h2>
-          <div style={{ marginTop: '0.75rem' }}>
-            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.25rem', display: 'block' }}>เลือกอีเวนต์</label>
-            <select 
-              style={{ width: '100%', fontSize: '0.875rem', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '0.375rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-              value={selectedEventId} 
-              onChange={e => {
-                setSelectedEventId(Number(e.target.value));
-                setEditingBooth(null);
-              }}
-            >
-              <option value="">-- เลือกอีเวนต์ --</option>
-              {myEvents?.map((ev: any) => (
-                <option key={ev.eventId} value={ev.eventId}>{ev.eventName}</option>
-              ))}
-            </select>
-          </div>
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div style={{ position: 'fixed', top: '2rem', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--bg-elevated)', color: 'var(--text-main)', padding: '12px 24px', borderRadius: '8px', boxShadow: 'var(--shadow-lg)', zIndex: 9999, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+          <AlertCircle size={18} color="var(--primary)" />
+          {toastMsg}
+        </div>
+      )}
+
+      {/* Top Navbar */}
+      <div style={{ height: '64px', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }}>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>
+          สร้างแผนผังบูธ — {eventName}
+        </h1>
+        
+        {/* Toggle Canvas / Table */}
+        <div style={{ display: 'flex', backgroundColor: 'var(--bg-card-hover)', borderRadius: '8px', padding: '4px', border: '1px solid var(--border)' }}>
+          <button style={{ padding: '6px 16px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 600, backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', boxShadow: 'var(--shadow-sm)', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '12px', height: '12px', border: '2px solid var(--text-main)', borderRadius: '2px' }}></span> Canvas
+          </button>
+          <button style={{ padding: '6px 16px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'transparent', color: 'var(--text-muted)', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '12px', height: '12px', borderTop: '2px solid var(--text-muted)', borderBottom: '2px solid var(--text-muted)' }}></span> Table
+          </button>
         </div>
 
-        {selectedEventId ? (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <select 
+            value={selectedEventId} 
+            onChange={e => setSelectedEventId(Number(e.target.value))}
+            style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.875rem', fontWeight: 500 }}
+          >
+            <option value="">-- เลือกอีเวนต์ --</option>
+            {myEvents?.map((ev: any) => (
+              <option key={ev.eventId} value={ev.eventId}>{ev.eventName}</option>
+            ))}
+          </select>
+
+          <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '0.875rem' }}>
+            พรีวิว
+          </button>
+          <button 
+            className="btn btn-primary" 
+            style={{ padding: '8px 16px', fontSize: '0.875rem', opacity: hasUnsavedChanges ? 1 : 0.7 }}
+            onClick={() => saveFloorplan.mutate()}
+            disabled={!hasUnsavedChanges || saveFloorplan.isPending}
+          >
+            {saveFloorplan.isPending ? 'กำลังบันทึก...' : 'บันทึกแผนผัง'}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        
+        {/* Left Panel: Palette */}
+        <div style={{ width: '260px', backgroundColor: 'var(--bg-card)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 10 }}>
+          <div style={{ padding: '24px 20px', flex: 1, overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '16px', marginTop: 0 }}>เพิ่มบูธ</h3>
             
-            {/* Tools Section */}
-            <div>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>เครื่องมือ</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button 
-                style={{ width: '100%', padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '0.375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-main)', cursor: 'pointer' }}
-                onClick={() => {
-                  const boothData = { boothNo: `B-${(booths?.length || 0) + 1}`, price: '500', zoneId: '' };
-                  setNewBooth(boothData);
-                  createBooth.mutate(boothData);
-                }}
-                disabled={createBooth.isPending}
+                onClick={() => handleAddBooth(2 * PX_PER_METER, 2 * PX_PER_METER)}
+                style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.875rem', transition: 'var(--transition)' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
-                <Plus size={16} /> เพิ่มบูธใหม่
+                <div style={{ width: '24px', height: '24px', border: '2px solid var(--primary)', borderRadius: '4px', backgroundColor: 'var(--primary-glow)' }}></div>
+                บูธมาตรฐาน 2x2m
+              </button>
+              
+              <button 
+                onClick={() => handleAddBooth(4 * PX_PER_METER, 2 * PX_PER_METER)}
+                style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.875rem', transition: 'var(--transition)' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <div style={{ width: '32px', height: '24px', border: '2px solid var(--primary)', borderRadius: '4px', backgroundColor: 'var(--primary-glow)' }}></div>
+                บูธใหญ่ 4x2m
+              </button>
+
+              <button 
+                onClick={() => handleAddBooth(2 * PX_PER_METER, 2 * PX_PER_METER)}
+                style={{ width: '100%', padding: '12px', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', color: 'var(--text-main)', fontWeight: 600, fontSize: '0.875rem', transition: 'var(--transition)' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              >
+                <div style={{ width: '24px', height: '24px', border: '2px dashed var(--primary)', borderRadius: '4px', backgroundColor: 'transparent' }}></div>
+                บูธมุม (Corner)
               </button>
             </div>
 
-            {/* Zones Section */}
-            <div>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>โซน (Zones)</h3>
-              
-              {/* Add Zone */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <input type="color" style={{ width: '32px', height: '32px', borderRadius: '4px', cursor: 'pointer', border: 0, padding: 0 }} value={newZone.color} onChange={e => setNewZone({...newZone, color: e.target.value})} title="เลือกสี" />
-                <input type="text" style={{ width: '100%', fontSize: '0.875rem', padding: '0.375rem', border: '1px solid var(--border)', borderRadius: '4px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} placeholder="ชื่อโซน..." value={newZone.zoneName} onChange={e => setNewZone({...newZone, zoneName: e.target.value})} onKeyDown={e => { if (e.key === 'Enter' && newZone.zoneName) createZone.mutate(); }} />
-                <button style={{ backgroundColor: 'var(--primary)', color: '#fff', padding: '0.375rem', borderRadius: '4px', border: 0, cursor: 'pointer' }} onClick={() => createZone.mutate()} disabled={createZone.isPending || !newZone.zoneName}>
-                  <Plus size={16} />
-                </button>
-              </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.6, marginTop: '24px' }}>
+              ลากวางลงบน Canvas แล้วปรับขนาดได้ด้วยจุดมุมขวาล่าง ระบบ snap เข้ากริดอัตโนมัติ (ทุก 0.5m)
+            </p>
 
-              {/* Zone List */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {isLoadingZones ? (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Loading zones...</div>
-                ) : zones?.length === 0 ? (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>ยังไม่มีโซน</div>
-                ) : (
-                  zones?.map((z: any) => (
-                    <div key={z.zoneId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', backgroundColor: 'var(--bg-card-hover)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.875rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '1px solid var(--border)', backgroundColor: z.color }}></div>
-                        <span style={{ color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '120px' }}>{z.zoneName}</span>
-                      </div>
-                      <button 
-                        style={{ color: 'var(--text-muted)', border: 0, background: 'none', cursor: 'pointer' }}
-                        onClick={() => {
-                          if(window.confirm('ยืนยันลบโซนนี้?')) deleteZone.mutate(z.zoneId);
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '16px', marginTop: '32px' }}>โซน (Zones)</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {zones?.map((z: any) => (
+                <div key={z.zoneId} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: z.color || PRESET_COLORS[0] }}></div>
+                  {z.zoneName}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Center Canvas */}
+        <div style={{ flex: 1, position: 'relative', overflow: 'auto', backgroundColor: '#fafafa', display: 'flex', flexDirection: 'column' }}>
+          {selectedEventId ? (
+            <div style={{ padding: '40px', minWidth: '1200px', minHeight: '800px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div 
+                onClick={() => setEditingBoothId(null)}
+                style={{ 
+                  width: '800px', height: '600px', 
+                  backgroundColor: '#ffffff',
+                  backgroundImage: `linear-gradient(#e5e7eb 1px, transparent 1px), linear-gradient(90deg, #e5e7eb 1px, transparent 1px)`,
+                  backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+                  position: 'relative',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+                }}
+              >
+                {draftBooths.map(b => {
+                  const isEdit = editingBoothId === b.boothId;
+                  const zoneColor = zones?.find((z: any) => z.zoneId === b.zoneId)?.color;
+                  
+                  return (
+                    <Rnd
+                      key={b.boothId}
+                      size={{ width: b.w, height: b.h }}
+                      position={{ x: b.x, y: b.y }}
+                      dragGrid={[GRID_SIZE, GRID_SIZE]}
+                      resizeGrid={[GRID_SIZE, GRID_SIZE]}
+                      onDragStart={() => handleDragStart(b.boothId)}
+                      onDrag={(e, d) => handleDragOrResize(b.boothId, d.x, d.y, b.w, b.h)}
+                      onDragStop={() => handleDragOrResizeStop(b.boothId)}
+                      onResizeStart={() => handleDragStart(b.boothId)}
+                      onResize={(e, direction, ref, delta, position) => {
+                        handleDragOrResize(b.boothId, position.x, position.y, parseInt(ref.style.width), parseInt(ref.style.height));
+                      }}
+                      onResizeStop={() => handleDragOrResizeStop(b.boothId)}
+                      bounds="parent"
+                      style={{ zIndex: isEdit ? 100 : 1 }}
+                    >
+                      <div 
+                        onClick={(e) => { e.stopPropagation(); setEditingBoothId(b.boothId); }}
+                        style={{ 
+                          width: '100%', height: '100%', 
+                          backgroundColor: zoneColor ? `${zoneColor}20` : 'rgba(139, 92, 246, 0.1)',
+                          border: `2px solid ${isEdit ? 'var(--primary)' : (zoneColor || '#8b5cf6')}`,
+                          borderRadius: '6px',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          color: isEdit ? 'var(--primary)' : (zoneColor || '#8b5cf6'),
+                          cursor: 'pointer',
+                          position: 'relative'
                         }}
                       >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Grid Settings */}
-            <div>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem', marginBottom: '0.75rem' }}>การตั้งค่า</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                <input type="checkbox" id="snapToGrid" checked readOnly style={{ accentColor: 'var(--primary)' }} />
-                <label htmlFor="snapToGrid">Snap to grid (20px)</label>
-              </div>
-            </div>
-
-          </div>
-        ) : (
-          <div style={{ flex: 1, padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center' }}>
-            กรุณาเลือกอีเวนต์เพื่อเริ่มจัดผัง
-          </div>
-        )}
-      </div>
-
-      {/* Center: Main Canvas */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
-        {/* Canvas Toolbar / Legend */}
-        {selectedEventId && (
-          <div style={{ position: 'absolute', top: '1rem', left: '1rem', zIndex: 10, display: 'flex', gap: '0.5rem' }}>
-            <div style={{ backgroundColor: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', border: '1px solid var(--glass-border)', padding: '0.5rem 1rem', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.75rem' }}>
-              <span style={{ fontWeight: 700, color: 'var(--text-main)' }}>Legend:</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)' }}></div><span style={{ color: 'var(--text-muted)' }}>บูธว่าง</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '14px', height: '14px', borderRadius: '4px', backgroundColor: 'rgba(249, 115, 22, 0.15)', border: '1px solid rgba(249, 115, 22, 0.4)' }}></div><span style={{ color: 'var(--text-muted)' }}>ถูกจอง</span></div>
-              {zones?.slice(0, 3).map((z: any) => (
-                <div key={z.zoneId} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}><div style={{ width: '14px', height: '14px', borderRadius: '4px', border: `1px solid ${z.color}80`, backgroundColor: `${z.color}20` }}></div><span style={{ color: 'var(--text-muted)' }}>{z.zoneName}</span></div>
-              ))}
-              {zones && zones.length > 3 && <span style={{ color: 'var(--text-muted)' }}>+{zones.length - 3}</span>}
-            </div>
-          </div>
-        )}
-
-        <div 
-          style={{ 
-            flex: 1, width: '100%', height: '100%', overflow: 'auto', backgroundColor: 'var(--bg-card)',
-            backgroundImage: 'radial-gradient(var(--border) 1px, transparent 1px)', 
-            backgroundSize: '20px 20px',
-            backgroundPosition: '0 0'
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setEditingBooth(null);
-            }
-          }}
-        >
-          {selectedEventId ? (
-            isLoadingBooths ? (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>Loading map...</div>
-            ) : (
-              <div style={{ position: 'relative', width: '2000px', height: '2000px', transformOrigin: 'top left' }}>
-                {booths?.map((booth: any) => (
-                  <DraggableBooth 
-                    key={booth.boothId} 
-                    booth={booth} 
-                    onStop={handleDragStop} 
-                    onClick={(b: any) => setEditingBooth({...b})} 
-                    setHoveredBooth={setHoveredBooth}
-                  />
-                ))}
-
-                {hoveredBooth && (
-                  <div style={{
-                    position: 'absolute',
-                    top: Math.max(0, (hoveredBooth.posY || 0) - 10),
-                    left: (hoveredBooth.posX || 0) + (hoveredBooth.width || 80) + 15,
-                    backgroundColor: 'var(--bg-card)',
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                    border: '1px solid var(--border)',
-                    zIndex: 9999,
-                    pointerEvents: 'none',
-                    minWidth: '200px'
-                  }}>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>บูธ {hoveredBooth.boothNo}</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.875rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>สถานะ:</span>
-                        <span style={{ fontWeight: 600, color: hoveredBooth.status === 'booked' ? 'var(--danger)' : 'var(--primary)' }}>
-                          {hoveredBooth.status === 'booked' ? 'ถูกจองแล้ว' : 'ว่าง'}
-                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, pointerEvents: 'none' }}>{b.boothNo}</span>
+                        {isEdit && (
+                          <>
+                            <div style={{ position: 'absolute', bottom: '-4px', right: '-4px', width: '10px', height: '10px', backgroundColor: 'var(--primary)', borderRadius: '50%' }}></div>
+                            <div style={{ position: 'absolute', bottom: '-4px', left: '-4px', width: '10px', height: '10px', backgroundColor: 'var(--primary)', borderRadius: '50%' }}></div>
+                            <div style={{ position: 'absolute', top: '-4px', right: '-4px', width: '10px', height: '10px', backgroundColor: 'var(--primary)', borderRadius: '50%' }}></div>
+                            <div style={{ position: 'absolute', top: '-4px', left: '-4px', width: '10px', height: '10px', backgroundColor: 'var(--primary)', borderRadius: '50%' }}></div>
+                          </>
+                        )}
                       </div>
-                      {hoveredBooth.zone && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>โซน:</span>
-                          <span style={{ fontWeight: 600, color: hoveredBooth.zone.color || 'var(--text-main)' }}>{hoveredBooth.zone.zoneName}</span>
-                        </div>
-                      )}
-                      {hoveredBooth.price && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ color: 'var(--text-muted)' }}>ราคา:</span>
-                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>฿{hoveredBooth.price}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                    </Rnd>
+                  );
+                })}
               </div>
-            )
+            </div>
           ) : (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: 'var(--text-muted)' }}>
-              <div style={{ marginBottom: '1rem', opacity: 0.5 }}><Edit size={64} /></div>
-              <p>Select an event to load the canvas</p>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              กรุณาเลือกอีเวนต์เพื่อเริ่มสร้างแผนผัง
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Right Sidebar: Properties */}
-      <div style={{ width: '320px', backgroundColor: 'var(--bg-card)', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 10 }}>
-        <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-card-hover)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>คุณสมบัติ (Properties)</h3>
-          {editingBooth && (
-            <button onClick={() => setEditingBooth(null)} style={{ border: 0, background: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><X size={16}/></button>
-          )}
+          
+          <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.875rem', fontWeight: 500 }}>
+            หลักเกณฑ์เพื่อสแนปเข้าพิกัดในแผงด้านขวา - ลากขอบเพื่อ resize
+          </div>
         </div>
 
-        {editingBooth ? (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem', backgroundColor: 'var(--bg-dark)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-              <div style={{ 
-                width: '40px', height: '40px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.875rem',
-                backgroundColor: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color ? `${zones.find((z:any)=>z.zoneId === editingBooth.zoneId).color}20` : 'rgba(59, 130, 246, 0.15)',
-                borderColor: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color ? `${zones.find((z:any)=>z.zoneId === editingBooth.zoneId).color}80` : 'rgba(59, 130, 246, 0.4)',
-                borderWidth: '1px',
-                borderStyle: 'solid',
-                color: zones?.find((z:any)=>z.zoneId === editingBooth.zoneId)?.color || '#60a5fa'
-              }}>
-                {editingBooth.boothNo.substring(0, 2)}
-              </div>
-              <div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>บูธที่เลือก</div>
-                <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{editingBooth.boothNo}</div>
-              </div>
-            </div>
+        {/* Right Sidebar: Properties & Table */}
+        <div style={{ width: '380px', backgroundColor: 'var(--bg-card)', borderLeft: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 10 }}>
+          
+          {/* Properties Area */}
+          <div style={{ padding: '24px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '16px', marginTop: 0 }}>
+              คุณสมบัติบูธที่เลือก {editingBooth ? `- ${editingBooth.boothNo}` : ''}
+            </h3>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>หมายเลขบูธ</label>
-                <input type="text" style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.875rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={editingBooth.boothNo} onChange={e => setEditingBooth({...editingBooth, boothNo: e.target.value})} />
-              </div>
-              
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>ราคา (บาท)</label>
-                <input type="number" style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.875rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={editingBooth.price} onChange={e => setEditingBooth({...editingBooth, price: e.target.value})} />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>โซน (Zone)</label>
-                <select style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.875rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={editingBooth.zoneId || ''} onChange={e => setEditingBooth({...editingBooth, zoneId: e.target.value})}>
-                  <option value="">-- ไม่ระบุโซน --</option>
-                  {zones?.map((z: any) => (
-                    <option key={z.zoneId} value={z.zoneId}>{z.zoneName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>สถานะ</label>
-                <div style={{ fontSize: '0.875rem', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: '4px', backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: editingBooth.status === 'booked' ? '#f97316' : '#22c55e' }}></div>
-                  {editingBooth.status === 'booked' ? 'จองแล้ว' : 'ว่าง'}
+            {editingBooth ? (
+              <div 
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}
+                onFocus={() => setIsTableEditing(true)} 
+                onBlur={() => setIsTableEditing(false)}
+              >
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>X (m)</label>
+                  <input type="number" step="0.5" value={editingBooth.x / PX_PER_METER} onChange={e => updateBoothState(editingBooth.boothId, { x: Number(e.target.value) * PX_PER_METER })} style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>Y (m)</label>
+                  <input type="number" step="0.5" value={editingBooth.y / PX_PER_METER} onChange={e => updateBoothState(editingBooth.boothId, { y: Number(e.target.value) * PX_PER_METER })} style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>กว้าง (m)</label>
+                  <input type="number" step="0.5" value={editingBooth.w / PX_PER_METER} onChange={e => updateBoothState(editingBooth.boothId, { w: Number(e.target.value) * PX_PER_METER })} style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>ยาว (m)</label>
+                  <input type="number" step="0.5" value={editingBooth.h / PX_PER_METER} onChange={e => updateBoothState(editingBooth.boothId, { h: Number(e.target.value) * PX_PER_METER })} style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>รหัสบูธ</label>
+                  <input type="text" value={editingBooth.boothNo} onChange={e => updateBoothState(editingBooth.boothId, { boothNo: e.target.value })} style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px', display: 'block' }}>ราคา (฿)</label>
+                  <input type="number" value={editingBooth.price} onChange={e => updateBoothState(editingBooth.boothId, { price: e.target.value })} style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <button onClick={() => setDraftBooths(prev => prev.filter(b => b.boothId !== editingBooth.boothId))} style={{ width: '100%', padding: '8px', backgroundColor: 'transparent', color: 'var(--status-closed)', border: '1px solid var(--status-closed)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, marginTop: '8px' }}>
+                    ลบบูธนี้
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div style={{ paddingTop: '1.5rem', marginTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
-              <button 
-                style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--danger)', borderRadius: '4px', backgroundColor: 'transparent', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.875rem' }}
-                onClick={() => {
-                  if(window.confirm('คุณแน่ใจหรือไม่ที่จะลบบูธนี้?')) deleteBooth.mutate();
-                }}
-                disabled={deleteBooth.isPending}
-              >
-                ลบบูธ
-              </button>
-              <button 
-                style={{ flex: 2, padding: '0.5rem', border: 0, borderRadius: '4px', backgroundColor: 'var(--primary)', color: '#fff', cursor: 'pointer', fontSize: '0.875rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
-                onClick={() => updateBooth.mutate()}
-                disabled={updateBooth.isPending}
-              >
-                <Save size={16} /> บันทึก
-              </button>
-            </div>
-
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', backgroundColor: 'var(--bg-main)', borderRadius: '8px', border: '1px dashed var(--border)' }}>
+                คลิกเลือกบูธบน Canvas
+              </div>
+            )}
           </div>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--bg-card-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', border: '1px solid var(--border)' }}>
-              <Edit size={24} />
-            </div>
-            <p style={{ fontSize: '0.875rem' }}>คลิกที่บูธบนแผนที่เพื่อดูคุณสมบัติและแก้ไขข้อมูล</p>
+
+          {/* Table Area */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead style={{ backgroundColor: 'var(--bg-card-hover)', position: 'sticky', top: 0, zIndex: 5 }}>
+                <tr>
+                  <th style={{ padding: '12px 24px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>รหัส</th>
+                  <th style={{ padding: '12px 12px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>X</th>
+                  <th style={{ padding: '12px 12px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Y</th>
+                  <th style={{ padding: '12px 12px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>W</th>
+                  <th style={{ padding: '12px 24px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>H</th>
+                </tr>
+              </thead>
+              <tbody>
+                {draftBooths.map(b => (
+                  <tr 
+                    key={b.boothId} 
+                    onClick={() => setEditingBoothId(b.boothId)}
+                    style={{ 
+                      borderBottom: '1px solid var(--border)', 
+                      backgroundColor: editingBoothId === b.boothId ? 'rgba(139, 92, 246, 0.05)' : 'transparent',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <td style={{ padding: '12px 24px', fontSize: '0.875rem', fontWeight: 600, color: editingBoothId === b.boothId ? 'var(--primary)' : 'var(--text-main)' }}>
+                      {b.boothNo}
+                    </td>
+                    <td style={{ padding: '12px 12px' }}>
+                      <input 
+                        type="number" 
+                        step="0.5" 
+                        value={b.x / PX_PER_METER} 
+                        onChange={e => updateBoothState(b.boothId, { x: Number(e.target.value) * PX_PER_METER })} 
+                        style={{ width: '40px', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} 
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 12px' }}>
+                      <input 
+                        type="number" 
+                        step="0.5" 
+                        value={b.y / PX_PER_METER} 
+                        onChange={e => updateBoothState(b.boothId, { y: Number(e.target.value) * PX_PER_METER })} 
+                        style={{ width: '40px', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} 
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 12px' }}>
+                      <input 
+                        type="number" 
+                        step="0.5" 
+                        value={b.w / PX_PER_METER} 
+                        onChange={e => updateBoothState(b.boothId, { w: Number(e.target.value) * PX_PER_METER })} 
+                        style={{ width: '40px', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} 
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 24px' }}>
+                      <input 
+                        type="number" 
+                        step="0.5" 
+                        value={b.h / PX_PER_METER} 
+                        onChange={e => updateBoothState(b.boothId, { h: Number(e.target.value) * PX_PER_METER })} 
+                        style={{ width: '40px', padding: '4px', border: '1px solid var(--border)', borderRadius: '4px', backgroundColor: 'var(--bg-main)', color: 'var(--text-main)', fontSize: '0.875rem' }} 
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
+
+        </div>
       </div>
-
     </div>
   );
 };

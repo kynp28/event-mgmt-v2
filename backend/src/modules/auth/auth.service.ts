@@ -96,6 +96,10 @@ export class AuthService {
       username: user.username,
       email: user.email,
       avatarUrl: user.avatarUrl,
+      bankName: user.bankName,
+      bankAccountNo: user.bankAccountNo,
+      bankAccountName: user.bankAccountName,
+      promptpayNo: user.promptpayNo,
       roles,
     };
   }
@@ -105,13 +109,25 @@ export class AuthService {
     avatarUrl?: string | null;
     currentPassword?: string;
     newPassword?: string;
+    bankName?: string | null;
+    bankAccountNo?: string | null;
+    bankAccountName?: string | null;
+    promptpayNo?: string | null;
   }): Promise<AuthResult> {
     const user = await this.authRepository.findUserById(userId);
     if (!user) {
       throw new UnauthorizedError('ไม่พบข้อมูลผู้ใช้');
     }
 
-    const updateData: { username?: string; avatarUrl?: string | null; passwordHash?: string } = {};
+    const updateData: { 
+      username?: string; 
+      avatarUrl?: string | null; 
+      passwordHash?: string;
+      bankName?: string | null;
+      bankAccountNo?: string | null;
+      bankAccountName?: string | null;
+      promptpayNo?: string | null;
+    } = {};
 
     if (input.username !== undefined && input.username.trim()) {
       updateData.username = input.username.trim();
@@ -120,6 +136,11 @@ export class AuthService {
     if (input.avatarUrl !== undefined) {
       updateData.avatarUrl = input.avatarUrl;
     }
+    
+    if (input.bankName !== undefined) updateData.bankName = input.bankName;
+    if (input.bankAccountNo !== undefined) updateData.bankAccountNo = input.bankAccountNo;
+    if (input.bankAccountName !== undefined) updateData.bankAccountName = input.bankAccountName;
+    if (input.promptpayNo !== undefined) updateData.promptpayNo = input.promptpayNo;
 
     if (input.newPassword) {
       if (!input.currentPassword) {
@@ -146,6 +167,10 @@ export class AuthService {
         username: updatedUser.username,
         email: updatedUser.email,
         avatarUrl: updatedUser.avatarUrl,
+        bankName: updatedUser.bankName,
+        bankAccountNo: updatedUser.bankAccountNo,
+        bankAccountName: updatedUser.bankAccountName,
+        promptpayNo: updatedUser.promptpayNo,
         roles,
       },
     };

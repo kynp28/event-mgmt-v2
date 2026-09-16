@@ -75,4 +75,13 @@ router.post(
   asyncHandler(controller.confirmWaitlist)
 );
 
+
+// (Organizer) Verify Payment
+router.patch(
+  '/:id/verify-payment',
+  authenticate,
+  requirePermission('create_event'),
+  asyncHandler(controller.verifyPayment)
+);
+
 export default router;

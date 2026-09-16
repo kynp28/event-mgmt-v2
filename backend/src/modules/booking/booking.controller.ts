@@ -69,4 +69,26 @@ export class BookingController {
     const result = await this.bookingService.confirmWaitlistBooking(vendorId, waitlistEntryId);
     res.status(200).json({ message: 'ยืนยันการใช้สิทธิ์คิวสำรองและจองบูธสำเร็จ', data: result });
   };
+
+  uploadSlip = async (req: Request, res: Response) => {
+    const { bookingIds, slipImage } = req.body;
+    if (!bookingIds || !Array.isArray(bookingIds) || !slipImage) {
+      return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบถ้วน' });
+    }
+    const result = await this.bookingService.uploadSlip(bookingIds, slipImage);
+    res.status(200).json({ success: true, message: 'อัปโหลดสลิปสำเร็จ', data: result });
+  };
+
+  verifyPayment = async (req: Request, res: Response) => {
+    const organizerId = req.user!.userId;
+    const bookingId = parseInt(req.params.id, 10);
+    const { status, reason } = req.body;
+    
+    if (isNaN(bookingId)) {
+      return res.status(400).json({ success: false, message: 'Invalid booking ID' });
+    }
+    
+    const result = await this.bookingService.verifyPayment(bookingId, status, reason, organizerId);
+    res.status(200).json({ success: true, message: 'บันทึกผลการตรวจสอบสำเร็จ', data: result });
+  };
 }

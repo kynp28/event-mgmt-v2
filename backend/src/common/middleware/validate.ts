@@ -6,6 +6,8 @@ export function validateBody(schema: ZodType) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
+      console.log('Validation failed for body:', req.body);
+      console.log('Issues:', JSON.stringify(result.error.issues, null, 2));
       throw new ValidationError('ข้อมูลที่ส่งมาไม่ถูกต้อง', result.error.issues);
     }
     req.body = result.data;

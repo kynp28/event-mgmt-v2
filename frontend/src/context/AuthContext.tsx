@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const hasRole = (role: string) => {
-    return user?.roles.includes(role) || false;
+    return user?.roles?.includes(role) || false;
   };
 
   const isAuthenticated = !!user;

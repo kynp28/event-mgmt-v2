@@ -6,10 +6,10 @@ export class EventRepository {
     return prisma.event.create({ data });
   }
 
-  async findEventById(eventId: number): Promise<Event | null> {
+  async findEventById(eventId: number): Promise<any> {
     return prisma.event.findFirst({
       where: { eventId, deletedAt: null },
-      include: { organizer: { select: { username: true, email: true } } }
+      include: { organizer: { select: { username: true, email: true, bankName: true, bankAccountNo: true, bankAccountName: true, promptpayNo: true } } }
     });
   }
 
