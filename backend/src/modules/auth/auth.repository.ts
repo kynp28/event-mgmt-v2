@@ -16,7 +16,7 @@ export class AuthRepository {
     });
   }
 
-  async updateUser(userId: number, data: { username?: string; avatarUrl?: string | null; passwordHash?: string }): Promise<User> {
+  async updateUser(userId: number, data: any): Promise<User> {
     return prisma.user.update({
       where: { userId },
       data,

@@ -61,6 +61,7 @@ export const Settings: React.FC = () => {
   const [bankName, setBankName] = useState('ธนาคารกสิกรไทย (KBank)');
   const [accountNumber, setAccountNumber] = useState('123-4-56789-0');
   const [accountName, setAccountName] = useState('บจก. อีเวนต์คอร์ คอร์ปอเรชั่น');
+  const [promptpayNo, setPromptpayNo] = useState('');
 
   // General Notification
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -76,6 +77,10 @@ export const Settings: React.FC = () => {
           if (u.avatarUrl) {
             setAvatarUrl(u.avatarUrl);
           }
+          if (u.bankName) setBankName(u.bankName);
+          if (u.bankAccountNo) setAccountNumber(u.bankAccountNo);
+          if (u.bankAccountName) setAccountName(u.bankAccountName);
+          if (u.promptpayNo) setPromptpayNo(u.promptpayNo);
         }
       } catch (err) {
         // Fallback to auth context
@@ -133,7 +138,11 @@ export const Settings: React.FC = () => {
     try {
       const res = await api.patch('/auth/profile', {
         username,
-        avatarUrl: avatarUrl || null
+        avatarUrl: avatarUrl || null,
+        bankName,
+        bankAccountNo: accountNumber,
+        bankAccountName: accountName,
+        promptpayNo
       });
 
       if (res.data?.data?.user) {
@@ -146,6 +155,7 @@ export const Settings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err: any) {
+      console.error("Save profile error:", err.response?.data);
       setProfileError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกโปรไฟล์');
     } finally {
       setProfileSaving(false);
@@ -711,12 +721,21 @@ export const Settings: React.FC = () => {
 
                   <div style={{ marginBottom: '1.25rem' }}>
                     <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>ชื่อธนาคาร</label>
-                    <input 
-                      type="text" 
+                    <select 
                       value={bankName} 
                       onChange={(e) => setBankName(e.target.value)} 
-                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-main)' }} 
-                    />
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-main)', appearance: 'auto' }} 
+                    >
+                      <option value="ธนาคารกสิกรไทย (KBank)">ธนาคารกสิกรไทย (KBank)</option>
+                      <option value="ธนาคารไทยพาณิชย์ (SCB)">ธนาคารไทยพาณิชย์ (SCB)</option>
+                      <option value="ธนาคารกรุงเทพ (BBL)">ธนาคารกรุงเทพ (BBL)</option>
+                      <option value="ธนาคารกรุงไทย (KTB)">ธนาคารกรุงไทย (KTB)</option>
+                      <option value="ธนาคารกรุงศรีอยุธยา (BAY)">ธนาคารกรุงศรีอยุธยา (BAY)</option>
+                      <option value="ธนาคารทหารไทยธนชาต (TTB)">ธนาคารทหารไทยธนชาต (TTB)</option>
+                      <option value="ธนาคารออมสิน (GSB)">ธนาคารออมสิน (GSB)</option>
+                      <option value="ธนาคารอาคารสงเคราะห์ (GHB)">ธนาคารอาคารสงเคราะห์ (GHB)</option>
+                      <option value="ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร (BAAC)">ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร (BAAC)</option>
+                    </select>
                   </div>
 
                   <div style={{ marginBottom: '1.25rem' }}>
@@ -737,6 +756,18 @@ export const Settings: React.FC = () => {
                       onChange={(e) => setAccountName(e.target.value)} 
                       style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-main)' }} 
                     />
+                  </div>
+
+                  <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>เบอร์พร้อมเพย์ (PromptPay)</label>
+                    <input 
+                      type="text" 
+                      value={promptpayNo} 
+                      onChange={(e) => setPromptpayNo(e.target.value)} 
+                      placeholder="เบอร์มือถือ หรือ เลขประจำตัวประชาชน"
+                      style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-main)' }} 
+                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>ระบบจะใช้เบอร์นี้สร้าง QR Code ให้อัตโนมัติเมื่อ Vendor ชำระเงิน</p>
                   </div>
 
                   <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem' }}>

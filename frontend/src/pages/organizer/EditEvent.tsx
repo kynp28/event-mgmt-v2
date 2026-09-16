@@ -1,421 +1,253 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Calendar, MapPin, X, Image as ImageIcon, Users, ChevronLeft, ChevronRight, FileText, Upload } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Image as ImageIcon, X } from 'lucide-react';
 import api from '../../services/api';
+import './CreateEvent.css'; // Shared CSS
 
-export const EditEvent: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const [eventName, setEventName] = useState('');
-  const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [location, setLocation] = useState('');
-  const [eventStatus, setEventStatus] = useState('draft');
-  const [images, setImages] = useState<string[]>([]);
-  const [invoiceUrl, setInvoiceUrl] = useState<string>('');
-  const [invoiceFileName, setInvoiceFileName] = useState<string>('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [currentSlide, setCurrentSlide] = useState(0);
+export const EditEvent = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
+
+  const [form, setForm] = useState({
+    eventName: '',
+    category: 'เทคโนโลยี',
+    description: '',
+    startDate: '',
+    endDate: '',
+    location: '',
+    isPublished: true,
+  });
+  
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const CATEGORIES = ['เทคโนโลยี', 'อาหาร', 'ดนตรี', 'ธุรกิจ', 'ไลฟ์สไตล์'];
+
+  const { data: event, isLoading } = useQuery({
+    queryKey: ['event', id],
+    queryFn: async () => {
+      const res = await api.get(`/events/${id}`);
+      return res.data.data;
+    }
+  });
+
+  const getImageUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith('[')) {
+      try { return JSON.parse(url)[0]; } catch(e) { return url; }
+    }
+    return url;
+  };
 
   useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const res = await api.get(`/events/${id}`);
-        const event = res.data.data;
-        setEventName(event.eventName);
-        setDescription(event.description || '');
-        
-        // Format dates for datetime-local input
-        const formatForInput = (dateString: string) => {
-          if (!dateString) return '';
-          const d = new Date(dateString);
-          return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-        };
+    if (event) {
+      setForm({
+        eventName: event.eventName || '',
+        category: event.category || 'เทคโนโลยี',
+        description: event.description || '',
+        startDate: event.startDate ? new Date(event.startDate).toISOString().split('T')[0] : '',
+        endDate: event.endDate ? new Date(event.endDate).toISOString().split('T')[0] : '',
+        location: event.location || '',
+        isPublished: event.eventStatus === 'open',
+      });
+      setImagePreview(getImageUrl(event.imageUrl));
+    }
+  }, [event]);
 
-        setStartDate(formatForInput(event.startDate));
-        setEndDate(formatForInput(event.endDate));
-        setLocation(event.location || '');
-        setEventStatus(event.eventStatus);
-        
-        if (event.invoiceUrl) {
-          setInvoiceUrl(event.invoiceUrl);
-          setInvoiceFileName('ไฟล์ใบแจ้งหนี้ที่มีอยู่');
-        }
-
-        if (event.imageUrl) {
-          try {
-            const parsed = JSON.parse(event.imageUrl);
-            if (Array.isArray(parsed)) {
-              setImages(parsed);
-            } else {
-              setImages([event.imageUrl]);
-            }
-          } catch {
-            setImages([event.imageUrl]);
-          }
-        }
-      } catch (err: any) {
-        setError('ไม่สามารถโหลดข้อมูลอีเวนต์ได้');
-      } finally {
-        setFetching(false);
-      }
-    };
-    if (id) fetchEvent();
-  }, [id]);
-
-  const handleInvoiceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError('ไฟล์ใบแจ้งหนี้ต้องมีขนาดไม่เกิน 10MB');
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await api.patch(`/events/${id}`, data);
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['organizerStats'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['event', id] });
+      navigate(`/organizer`);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || 'เกิดข้อผิดพลาดในการแก้ไขงาน');
+    }
+  });
+
+  const handleSubmit = (status: 'draft' | 'open') => {
+    if (!form.eventName || !form.description || !form.startDate || !form.endDate || !form.location) {
+      setError('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
+      return;
+    }
+    if (form.description.length < 50) {
+      setError('กรุณากรอกรายละเอียดงานอย่างน้อย 50 ตัวอักษร');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setInvoiceUrl(reader.result as string);
-      setInvoiceFileName(file.name);
-      setError('');
+    const payload = {
+      ...form,
+      eventStatus: status,
+      imageUrl: imagePreview && !imagePreview.startsWith('http') ? JSON.stringify([imagePreview]) : event.imageUrl,
     };
-    reader.readAsDataURL(file);
+
+    updateMutation.mutate(payload);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    
-    if (images.length + files.length > 4) {
-      setError('คุณสามารถอัปโหลดรูปภาพได้สูงสุด 4 รูปเท่านั้น');
-      return;
-    }
-
-    let hasError = false;
-    const newImages: string[] = [];
-
-    const readPromises = files.map(file => {
-      return new Promise<void>((resolve) => {
-        if (file.size > 5 * 1024 * 1024) {
-          hasError = true;
-          resolve();
-          return;
-        }
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newImages.push(reader.result as string);
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-
-    Promise.all(readPromises).then(() => {
-      if (hasError) {
-        setError('ไฟล์รูปภาพบางไฟล์มีขนาดเกิน 5MB');
-      } else {
-        setError('');
-        setImages(prev => [...prev, ...newImages]);
-        setCurrentSlide(0);
-      }
-      if (e.target) e.target.value = '';
-    });
-  };
-
-  const removeImage = (index: number) => {
-    setImages(prev => {
-      const newImages = prev.filter((_, i) => i !== index);
-      if (currentSlide >= newImages.length) {
-        setCurrentSlide(Math.max(0, newImages.length - 1));
-      }
-      return newImages;
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    
-    try {
-      await api.patch(`/events/${id}`, {
-        eventName,
-        description,
-        startDate: new Date(startDate).toISOString(),
-        endDate: new Date(endDate).toISOString(),
-        location,
-        eventStatus,
-        imageUrl: images.length > 0 ? JSON.stringify(images) : null,
-        invoiceUrl: invoiceUrl || null,
-      });
-      queryClient.invalidateQueries({ queryKey: ['myEvents'] });
-      queryClient.invalidateQueries({ queryKey: ['adminEvents'] });
-      navigate('/organizer/events');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update event');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (fetching) {
-    return <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>กำลังโหลดข้อมูลอีเวนต์...</div>;
-  }
+  if (isLoading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--text-muted)' }}>กำลังโหลดข้อมูล...</div>;
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-dark)', minHeight: 'calc(100vh - 80px)', padding: '2rem 1.5rem' }}>
-      <div className="container animate-fade-in" style={{ maxWidth: '1200px', padding: 0 }}>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>แก้ไขอีเวนต์</h1>
-            <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 0 0' }}>อัปเดตข้อมูลและดูตัวอย่างการแสดงผลได้ทันที</p>
-          </div>
+    <div className="create-event-page">
+      <nav className="top-nav">
+        <div className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={18} />
+          กลับหน้าก่อนหน้า
         </div>
+      </nav>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+      <div className="page">
+        <h1 className="page-title">แก้ไขงาน</h1>
+        <p className="page-sub">ปรับปรุงรายละเอียดงานอีเวนต์ของคุณ</p>
+
+        {error && <div style={{ color: 'var(--status-closed)', marginBottom: '16px', fontWeight: 600 }}>{error}</div>}
+
+        <div className="card">
+          <h3>ข้อมูลพื้นฐาน</h3>
+          <div className="field">
+            <label>ชื่องาน <span className="req">*</span></label>
+            <input 
+              className="input" 
+              type="text" 
+              placeholder="เช่น Bangkok Tech Summit 2026"
+              value={form.eventName}
+              onChange={e => setForm({...form, eventName: e.target.value})}
+            />
+          </div>
           
-          {/* LEFT COLUMN: FORM */}
-          <div className="glass-card" style={{ alignSelf: 'start' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '1.5rem' }}>ข้อมูลงานแฟร์</h2>
-            {error && <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.875rem' }}>{error}</div>}
-            
-            <form onSubmit={handleSubmit}>
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>รูปภาพแบนเนอร์/โปสเตอร์ (สูงสุด 4 รูป)</label>
-                
-                {images.length > 0 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginBottom: '1rem' }}>
-                    {images.map((img, idx) => (
-                      <div key={idx} style={{ position: 'relative', aspectRatio: '1/1', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-                        <img src={img} alt={`Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <button type="button" onClick={() => removeImage(idx)} style={{ position: 'absolute', top: '4px', right: '4px', backgroundColor: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {images.length < 4 && (
-                  <div style={{ position: 'relative', border: '2px dashed var(--border)', borderRadius: '8px', backgroundColor: 'var(--bg-card-hover)', padding: '2rem 1rem', textAlign: 'center', transition: 'background-color 0.2s' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--text-muted)' }}>
-                      <ImageIcon size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                      <div style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: 600 }}>คลิกเพื่ออัปโหลดรูปภาพ</div>
-                      <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>PNG, JPG สูงสุด 5MB (อัปโหลดเพิ่มได้อีก {4 - images.length} รูป)</div>
-                    </div>
-                    <input type="file" multiple style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }} accept="image/*" onChange={handleImageUpload} />
-                  </div>
-                )}
-              </div>
-
-              {/* Invoice Upload Section */}
-              <div style={{ marginBottom: '1.25rem', padding: '1.25rem', backgroundColor: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FileText size={18} color="var(--primary)" /> ใบแจ้งหนี้ / ใบเสร็จรับเงินประจำอีเวนต์ (Invoice/Receipt)
-                  </label>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>JPG, PNG, PDF (≤10MB)</span>
-                </div>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                  ไฟล์นี้จะแสดงเมื่อผู้เช่าบูธกด "ดูใบแจ้งหนี้" ในรายการจองของตนเอง
-                </p>
-
-                {invoiceUrl ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', backgroundColor: 'var(--bg-card)', borderRadius: '6px', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
-                      {invoiceUrl.startsWith('data:application/pdf') || invoiceUrl.endsWith('.pdf') ? (
-                        <div style={{ padding: '0.4rem 0.6rem', backgroundColor: '#ef4444', color: 'white', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                          PDF
-                        </div>
-                      ) : (
-                        <img src={invoiceUrl} alt="Invoice preview" style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px' }} />
-                      )}
-                      <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)' }}>
-                          {invoiceFileName || 'ไฟล์ใบแจ้งหนี้ประจำงาน'}
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--success)' }}>✓ พร้อมแสดงในหน้า Invoice</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setInvoiceUrl(''); setInvoiceFileName(''); }}
-                      style={{ padding: '0.35rem 0.65rem', border: '1px solid rgba(239, 68, 68, 0.3)', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                    >
-                      <X size={14} /> ลบไฟล์
-                    </button>
-                  </div>
-                ) : (
-                  <label style={{ border: '2px dashed var(--border)', borderRadius: '6px', padding: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', backgroundColor: 'var(--bg-card)', transition: 'border-color 0.2s' }}>
-                    <Upload size={20} color="var(--primary)" style={{ marginBottom: '0.25rem' }} />
-                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--primary)' }}>คลิกเพื่ออัปโหลดใบแจ้งหนี้ / ใบเสร็จ</span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>รองรับไฟล์รูปภาพ JPG, PNG หรือไฟล์เอกสาร PDF</span>
-                    <input type="file" accept="image/*,application/pdf" onChange={handleInvoiceUpload} style={{ display: 'none' }} />
-                  </label>
-                )}
-              </div>
-
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('event_name')}</label>
-                <input style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={eventName} onChange={e => setEventName(e.target.value)} required placeholder="เช่น งานกาชาดประจำปี 2026" />
-              </div>
-
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>คำอธิบายงาน (Description)</label>
-                <textarea style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', minHeight: '100px', resize: 'vertical' }} value={description} onChange={e => setDescription(e.target.value)} placeholder="เขียนคำอธิบายรายละเอียดงาน เพื่อดึงดูดผู้เช่าบูธ..." />
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('start_date')}</label>
-                  <input type="datetime-local" style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={startDate} onChange={e => setStartDate(e.target.value)} required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('end_date')}</label>
-                  <input type="datetime-local" style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={endDate} onChange={e => setEndDate(e.target.value)} required />
-                </div>
-              </div>
-              
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>{t('location')}</label>
-                <input style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }} value={location} onChange={e => setLocation(e.target.value)} placeholder="เช่น ไบเทค บางนา ฮอลล์ 1" />
-              </div>
-
-              <div style={{ marginBottom: '2rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>สถานะอีเวนต์</label>
-                <select 
-                  style={{ width: '100%', padding: '0.75rem 1rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '1rem', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }} 
-                  value={eventStatus} 
-                  onChange={e => setEventStatus(e.target.value)}
+          <div className="field">
+            <label>หมวดหมู่ <span className="req">*</span></label>
+            <div className="cat-select">
+              {CATEGORIES.map(cat => (
+                <div 
+                  key={cat}
+                  className={`cat-chip ${form.category === cat ? 'selected' : ''}`}
+                  onClick={() => setForm({...form, category: cat})}
                 >
-                  <option value="draft">ฉบับร่าง (Draft - ซ่อนไว้ก่อน)</option>
-                  <option value="open">เปิดรับจอง (Open - ให้ผู้เช่าเห็นและจองได้)</option>
-                  <option value="closed">ปิดรับจอง (Closed)</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <button type="button" onClick={() => navigate('/organizer/events')} style={{ flex: 1, padding: '0.875rem', border: '1px solid var(--border)', borderRadius: '8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: 600, cursor: 'pointer' }}>{t('cancel')}</button>
-                <button type="submit" disabled={loading} style={{ flex: 2, padding: '0.875rem', border: 'none', borderRadius: '8px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: 600, cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
-                  {loading ? t('processing') : 'บันทึกการแก้ไข'}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* RIGHT COLUMN: PREVIEW */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', alignSelf: 'start', position: 'sticky', top: '100px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>Live Preview (ตัวอย่าง)</h2>
-            
-            <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-              
-              {/* Event Images Slider Preview */}
-              <div style={{ width: '100%', height: '240px', backgroundColor: 'var(--bg-card-hover)', position: 'relative', overflow: 'hidden' }}>
-                {images.length === 0 ? (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                    <ImageIcon size={48} style={{ opacity: 0.3 }} />
-                  </div>
-                ) : (
-                  <>
-                    <img src={images[currentSlide]} alt={`preview ${currentSlide}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    
-                    {images.length > 1 && (
-                      <>
-                        <button 
-                          type="button"
-                          onClick={() => setCurrentSlide(prev => (prev === 0 ? images.length - 1 : prev - 1))}
-                          style={{ position: 'absolute', top: '50%', left: '0.5rem', transform: 'translateY(-50%)', backgroundColor: 'rgba(255,255,255,0.7)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}
-                        >
-                          <ChevronLeft size={20} color="var(--text-main)" />
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={() => setCurrentSlide(prev => (prev === images.length - 1 ? 0 : prev + 1))}
-                          style={{ position: 'absolute', top: '50%', right: '0.5rem', transform: 'translateY(-50%)', backgroundColor: 'rgba(255,255,255,0.7)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}
-                        >
-                          <ChevronRight size={20} color="var(--text-main)" />
-                        </button>
-                        
-                        <div style={{ position: 'absolute', bottom: '0.75rem', left: '0', right: '0', display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                          {images.map((_, idx) => (
-                            <div 
-                              key={idx} 
-                              onClick={() => setCurrentSlide(idx)}
-                              style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: currentSlide === idx ? 'var(--primary)' : 'rgba(255,255,255,0.6)', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} 
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-                
-                {/* Date Badge */}
-                {startDate && (
-                  <div style={{ position: 'absolute', top: '1rem', left: '1rem', backgroundColor: 'white', padding: '0.25rem 0.5rem', borderRadius: '8px', textAlign: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase' }}>
-                      {new Date(startDate).toLocaleString('th-TH', { month: 'short' })}
-                    </div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', lineHeight: 1 }}>
-                      {new Date(startDate).getDate()}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Event Info Details */}
-              <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.25rem', wordBreak: 'break-word' }}>
-                  {eventName || 'ชื่ออีเวนต์ของคุณ'}
-                </h3>
-                
-                {description && (
-                  <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {description}
-                  </p>
-                )}
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: description ? '0' : '0.75rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                    <Calendar size={16} color="var(--primary)" />
-                    <span>
-                      {startDate ? new Date(startDate).toLocaleString('th-TH') : 'วันเริ่มต้น'} - {endDate ? new Date(endDate).toLocaleString('th-TH') : 'วันสิ้นสุด'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                    <MapPin size={16} color="var(--danger)" />
-                    <span>{location || 'ระบุสถานที่จัดงาน'}</span>
-                  </div>
+                  {cat}
                 </div>
-
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                      <Users size={16} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>จัดโดย</div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-main)' }}>คุณ (ผู้จัดงาน)</div>
-                    </div>
-                  </div>
-                  <button type="button" style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--primary-glow)', color: 'var(--primary)', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.875rem' }}>
-                    จองบูธเลย
-                  </button>
-                </div>
-
-              </div>
+              ))}
             </div>
-            
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>* มุมมองนี้คือตัวอย่างที่พ่อค้าแม่ค้าจะเห็นในแอปพลิเคชัน</p>
           </div>
-
+          
+          <div className={`field ${form.description && form.description.length < 50 ? 'has-error' : ''}`}>
+            <label>รายละเอียดงาน <span className="req">*</span><span className="char-count">{form.description.length}/500</span></label>
+            <textarea 
+              className="textarea" 
+              placeholder="อธิบายเกี่ยวกับงานนี้ กิจกรรมที่น่าสนใจ และสิ่งที่ผู้เข้าร่วมจะได้รับ"
+              value={form.description}
+              onChange={e => setForm({...form, description: e.target.value})}
+              maxLength={2000}
+            />
+            <div className="error-text">กรุณากรอกรายละเอียดงานอย่างน้อย 50 ตัวอักษร</div>
+          </div>
         </div>
+
+        <div className="card">
+          <h3>รูปภาพหน้าปก</h3>
+          {imagePreview ? (
+            <div className="upload-preview">
+              <img src={imagePreview} alt="Preview" />
+              <button className="remove-btn" onClick={() => setImagePreview(null)}>
+                <X size={16} />
+              </button>
+            </div>
+          ) : (
+            <div className="upload-box" onClick={() => document.getElementById('fileInput')?.click()}>
+              <ImageIcon size={32} />
+              <div className="txt">คลิกเพื่ออัปโหลดรูปภาพ</div>
+              <div className="sub">แนะนำขนาด 1200×630px · JPG, PNG ไม่เกิน 5MB</div>
+              <input type="file" id="fileInput" hidden accept="image/*" onChange={handleImageChange} />
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h3>วันที่และสถานที่</h3>
+          <div className="field">
+            <label>วันที่จัดงาน <span className="req">*</span></label>
+            <div className="date-range">
+              <input 
+                className="input" 
+                type="date" 
+                value={form.startDate}
+                onChange={e => setForm({...form, startDate: e.target.value})}
+              />
+              <span className="sep">→</span>
+              <input 
+                className="input" 
+                type="date" 
+                value={form.endDate}
+                onChange={e => setForm({...form, endDate: e.target.value})}
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label>สถานที่ <span className="req">*</span></label>
+            <input 
+              className="input" 
+              type="text" 
+              placeholder="เช่น QSNCC, กรุงเทพฯ"
+              value={form.location}
+              onChange={e => setForm({...form, location: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="publish-row">
+            <div className="txt">
+              <div className="title">เผยแพร่งานทันที</div>
+              <div className="desc">ถ้าปิดไว้ งานจะถูกบันทึกเป็นแบบร่าง (Draft) และยังไม่แสดงในหน้า Home</div>
+            </div>
+            <label className="switch">
+              <input 
+                type="checkbox" 
+                checked={form.isPublished}
+                onChange={e => setForm({...form, isPublished: e.target.checked})}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="footer-bar">
+        <button 
+          className="btn secondary" 
+          onClick={() => handleSubmit('draft')}
+          disabled={updateMutation.isPending}
+        >
+          บันทึกแบบร่าง
+        </button>
+        <button 
+          className="btn primary" 
+          onClick={() => handleSubmit(form.isPublished ? 'open' : 'draft')}
+          disabled={updateMutation.isPending}
+        >
+          {updateMutation.isPending ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+        </button>
       </div>
     </div>
   );

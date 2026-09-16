@@ -2,8 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
-import { Login } from './pages/auth/Login';
-import { Register } from './pages/auth/Register';
+import { AuthPage } from './pages/auth/AuthPage';
 import { Home } from './pages/Home';
 import { Invoice } from './pages/Invoice';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -39,13 +38,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
       <Router>
-        <ErrorBoundary>
-          <Routes>
-            {/* Auth Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* Public Routes with Top Navbar */}
+          <ErrorBoundary>
+            <Routes>
+              {/* Auth Routes */}
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/register" element={<AuthPage />} />
+              
+              {/* Public Routes with Top Navbar */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/events" element={<BrowseEvents />} />
@@ -71,16 +70,16 @@ function App() {
             </Route>
 
             {/* Organizer Dashboard Routes */}
-            <Route element={<ProtectedRoute requiredRole="organizer" />}>
-              <Route element={<DashboardLayout />}>
-                <Route path="/organizer" element={<OrganizerDashboard />} />
-                <Route path="/organizer/events" element={<ManageEvents />} />
-                <Route path="/organizer/events/create" element={<CreateEvent />} />
-                <Route path="/organizer/events/edit/:id" element={<EditEvent />} />
-                <Route path="/organizer/booths/manage" element={<ManageBooths />} />
-                <Route path="/organizer/bookings" element={<ManageBookings />} />
+              <Route element={<ProtectedRoute requiredRole="organizer" />}>
+                <Route element={<DashboardLayout />}>
+                  <Route path="/organizer" element={<OrganizerDashboard />} />
+                  <Route path="/organizer/events" element={<ManageEvents />} />
+                  <Route path="/organizer/events/create" element={<CreateEvent />} />
+                  <Route path="/organizer/events/edit/:id" element={<EditEvent />} />
+                  <Route path="/organizer/booths/manage" element={<ManageBooths />} />
+                  <Route path="/organizer/bookings" element={<ManageBookings />} />
+                </Route>
               </Route>
-            </Route>
 
             {/* Vendor Dashboard Routes */}
             <Route element={<ProtectedRoute requiredRole="vendor" />}>

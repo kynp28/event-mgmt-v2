@@ -22,7 +22,8 @@ export class BookingService {
     const affected = await this.boothRepository.updateManyBooths(boothIds, {
       lockState: 'payment_pending',
       lockedByUserId: vendorId,
-      lockedAt: new Date()
+      lockedAt: new Date(),
+      lockedUntil: new Date(Date.now() + 10 * 60 * 1000)
     });
 
     return { success: true, count: affected.count };
@@ -118,5 +119,78 @@ export class BookingService {
 
   async confirmWaitlistBooking(userId: number, waitlistEntryId: number) {
     return this.bookingRepository.confirmWaitlistBookingWithTransaction(userId, waitlistEntryId);
+  }
+
+  async uploadSlip(bookingIds: number[], slipImage: string) {
+    const results = [];
+    for (const id of bookingIds) {
+      const booking = await this.bookingRepository.findBookingById(id);
+      if (!booking) continue;
+      
+      // Set booth status to 'booked' to prevent timeout
+      await prisma.booth.update({
+        where: { boothId: booking.boothId },
+        data: { lockState: 'none', status: 'booked' }
+      });
+
+      const existingPayment = await prisma.payment.findUnique({ where: { bookingId: id } });
+      let payment;
+      if (existingPayment) {
+        payment = await prisma.payment.update({
+          where: { bookingId: id },
+          data: { slipImage, status: 'pending' }
+        });
+      } else {
+        payment = await prisma.payment.create({
+          data: {
+            bookingId: id,
+            slipImage,
+            status: 'pending'
+          }
+        });
+      }
+      results.push(payment);
+    }
+    return results;
+  }
+
+  async verifyPayment(bookingId: number, status: 'verified' | 'rejected', reason: string, organizerId: number) {
+    const booking = await this.bookingRepository.findBookingById(bookingId);
+    if (!booking) throw new NotFoundError('Booking not found');
+    
+    // Check if user is the organizer of the event
+    if (booking.event.organizerId !== organizerId) {
+      throw new ForbiddenError('ไม่มีสิทธิ์ตรวจสอบการจองนี้');
+    }
+
+    const payment = await prisma.payment.findUnique({ where: { bookingId } });
+    if (!payment) throw new NotFoundError('ไม่พบข้อมูลการชำระเงิน');
+
+    const updatedPayment = await prisma.payment.update({
+      where: { bookingId },
+      data: { status, verifiedAt: new Date(), verifiedBy: organizerId }
+    });
+
+    if (status === 'verified') {
+      await prisma.booking.update({
+        where: { bookingId },
+        data: { status: 'confirmed' }
+      });
+      await prisma.booth.update({
+        where: { boothId: booking.boothId },
+        data: { status: 'booked', lockState: 'none' }
+      });
+    } else {
+      await prisma.booking.update({
+        where: { bookingId },
+        data: { status: 'cancelled', cancelReason: reason || 'สลิปไม่ถูกต้อง' }
+      });
+      await prisma.booth.update({
+        where: { boothId: booking.boothId },
+        data: { status: 'available', lockState: 'none', lockedByUserId: null, lockedUntil: null }
+      });
+    }
+
+    return updatedPayment;
   }
 }

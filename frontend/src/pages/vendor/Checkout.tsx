@@ -9,8 +9,14 @@ export const Checkout = () => {
   const { event, selectedBooths } = location.state || {};
   
   const [loading, setLoading] = useState(false);
-  const [payMethod, setPayMethod] = useState('credit');
+  const [payMethod, setPayMethod] = useState('promptpay');
   const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes
+  const [phone, setPhone] = useState('');
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ลบตัวอักษรที่ไม่ใช่ตัวเลขออกทั้งหมด
+    setPhone(e.target.value.replace(/\D/g, ''));
+  };
 
   useEffect(() => {
     if (!event || !selectedBooths || selectedBooths.length === 0) {
@@ -55,12 +61,10 @@ export const Checkout = () => {
         eventId: event.eventId, 
         boothIds: selectedBooths.map((b: any) => b.boothId) 
       });
-      // Generating a mock booking ref since we create multiple backend bookings
-      // In reality, this should come from the API (maybe a grouped invoice ID)
       const bookingRef = `BK-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
       
       navigate('/booking-confirmed', { 
-        state: { event, selectedBooths, bookingRef } 
+        state: { event, selectedBooths, bookingRef, payMethod, bookings: res.data.data } 
       });
     } catch (err: any) {
       alert(err.response?.data?.message || 'เกิดข้อผิดพลาดในการจอง');
@@ -121,10 +125,17 @@ export const Checkout = () => {
                 <div className="error-text">รูปแบบอีเมลไม่ถูกต้อง</div>
               </div>
             </div>
-            <div className="field">
-              <label>เบอร์โทรศัพท์</label>
-              <input className="input" type="tel" placeholder="08X-XXX-XXXX" />
-            </div>
+              <div className="field">
+                <label>เบอร์โทรศัพท์</label>
+                <input 
+                  className="input" 
+                  type="text" 
+                  placeholder="08X-XXX-XXXX" 
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  maxLength={10}
+                />
+              </div>
             <div className="field">
               <label>ชื่อบริษัท / แบรนด์ (ถ้ามี)</label>
               <input className="input" type="text" placeholder="สำหรับพิมพ์บนป้ายหน้าบูธ" disabled />
@@ -134,10 +145,6 @@ export const Checkout = () => {
           <div className="card">
             <h3>ช่องทางชำระเงิน</h3>
             <div className="pay-options">
-              <div className={`pay-option ${payMethod === 'credit' ? 'selected' : ''}`} onClick={() => setPayMethod('credit')}>
-                <div className="pay-radio"></div>
-                <div><div className="name">บัตรเครดิต/เดบิต</div><div className="desc">Visa, Mastercard, JCB</div></div>
-              </div>
               <div className={`pay-option ${payMethod === 'promptpay' ? 'selected' : ''}`} onClick={() => setPayMethod('promptpay')}>
                 <div className="pay-radio"></div>
                 <div><div className="name">PromptPay</div><div className="desc">สแกน QR ผ่านแอปธนาคาร</div></div>

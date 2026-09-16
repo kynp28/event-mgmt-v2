@@ -13,7 +13,7 @@ export const EventDetails = () => {
   const [loading, setLoading] = useState(true);
   const [bookingLoading, setBookingLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,6 +46,11 @@ export const EventDetails = () => {
     if (selectedBooths.size === 0) return;
     if (!user) {
       navigate('/login');
+      return;
+    }
+    
+    if (hasRole && !hasRole('vendor')) {
+      alert('เฉพาะผู้ค้า (Vendor) เท่านั้นที่สามารถทำการจองบูธได้ (คุณเข้าสู่ระบบในฐานะ Organizer)');
       return;
     }
     

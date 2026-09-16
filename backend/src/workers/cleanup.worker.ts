@@ -78,6 +78,22 @@ export async function runCleanupCycle() {
   let expiredBookings = 0;
   let expiredOffers = 0;
 
+  
+  // 0. Expired Booth Holds (no booking completed)
+  const expiredHolds = await prisma.$queryRaw`
+    SELECT booth_id FROM booths 
+    WHERE lock_state = 'payment_pending' 
+      AND locked_until < NOW()
+  `;
+  
+  for (const hold of expiredHolds) {
+    try {
+      await releaseAndTryPromote(hold.booth_id, 'hold_timeout');
+    } catch (e) {
+      console.error('[Cleanup] Hold expiry failed', hold.booth_id, e);
+    }
+  }
+
   // 1. Expired Bookings (only if no payment uploaded or payment was rejected and grace period expired)
   const bookings = await prisma.booking.findMany({
     where: {
