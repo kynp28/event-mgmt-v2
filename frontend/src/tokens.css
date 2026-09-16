@@ -1,0 +1,205 @@
+/* ============================================
+   DESIGN TOKENS — Event Platform
+   ทีมออกแบบ | v1.0
+   ใช้คู่กับ :root ของเดิมในโปรเจกต์ — เพิ่ม/แทนที่ตัวแปรตามนี้ได้เลย
+   สลับธีมโดยใส่ data-theme="dark" บน <html> หรือ <body>
+   ============================================ */
+
+:root {
+  /* ---------- Color: Base / Light Mode (default) ---------- */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F7F8FA;
+  --bg-elevated: #FFFFFF;
+  --bg-overlay: rgba(15, 17, 21, 0.55);
+
+  --text-primary: #14161A;
+  --text-secondary: #5A5F6B;
+  --text-muted: #9AA0AC;
+  --text-inverse: #FFFFFF;
+
+  --border-default: #E6E8EC;
+  --border-strong: #D1D5DC;
+
+  /* ---------- Brand / Accent ---------- */
+  --accent: #6D5EF5;
+  --accent-hover: #5A4CE0;
+  --accent-soft: #EFEBFF;
+
+  /* ---------- Status Colors ---------- */
+  --status-open: #1FA96B;
+  --status-open-bg: #E7F8EF;
+  --status-closed: #E5484D;
+  --status-closed-bg: #FDECEC;
+  --status-almost-full: #F5A623;
+  --status-almost-full-bg: #FFF4E0;
+
+  /* ---------- Category Tag Colors (ตัวอย่าง ขยายเพิ่มได้ตามหมวดจริง) ---------- */
+  --cat-music: #E85D75;
+  --cat-music-bg: #FDECEF;
+  --cat-food: #F2A93B;
+  --cat-food-bg: #FEF3E1;
+  --cat-tech: #3B82F6;
+  --cat-tech-bg: #EAF1FE;
+  --cat-business: #6D5EF5;
+  --cat-business-bg: #EFEBFF;
+  --cat-default: #6B7280;
+  --cat-default-bg: #F1F2F4;
+
+  /* ---------- Shadow ---------- */
+  --shadow-sm: 0 1px 2px rgba(16, 18, 22, 0.06);
+  --shadow-md: 0 4px 12px rgba(16, 18, 22, 0.08);
+  --shadow-lg: 0 12px 32px rgba(16, 18, 22, 0.12);
+  --shadow-hover: 0 8px 20px rgba(109, 94, 245, 0.18);
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* ---------- Spacing Scale ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ---------- Typography ---------- */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 34px;
+
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  --line-tight: 1.2;
+  --line-normal: 1.5;
+  --line-relaxed: 1.7;
+
+  /* ---------- Transition ---------- */
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 320ms ease;
+
+  /* ---------- Breakpoints (อ้างอิงใน JS/comments — CSS ใช้ @media ตรงๆ) ---------- */
+  --bp-tablet: 768px;
+  --bp-mobile: 480px;
+
+  /* ---------- Input States ---------- */
+  --input-bg: #FFFFFF;
+  --input-border: var(--border-default);
+  --input-placeholder: var(--text-muted);
+
+  --input-focus-border: var(--accent);
+  --input-focus-ring: rgba(109, 94, 245, 0.15);
+
+  --input-error-border: var(--status-closed);
+  --input-error-bg: var(--status-closed-bg);
+  --input-error-ring: rgba(229, 72, 77, 0.14);
+  --input-error-text: var(--status-closed);
+
+  --input-success-border: var(--status-open);
+  --input-success-ring: rgba(31, 169, 107, 0.14);
+
+  --input-disabled-bg: var(--bg-secondary);
+  --input-disabled-border: var(--border-default);
+  --input-disabled-text: var(--text-muted);
+
+  /* ---------- Floorplan / Booth Status ---------- */
+  --booth-available-fill: var(--accent-soft);
+  --booth-available-border: var(--accent);
+  --booth-booked-fill: var(--border-default);
+  --booth-booked-border: var(--border-strong);
+  --booth-booked-text: var(--text-muted);
+  --booth-pending-fill: var(--status-almost-full-bg);
+  --booth-pending-border: var(--status-almost-full);
+  --booth-selected-ring: rgba(109, 94, 245, 0.35);
+}
+
+/* ============================================
+   DARK MODE
+   ใส่ data-theme="dark" ที่ <html> หรือ <body>
+   ============================================ */
+[data-theme="dark"] {
+  --bg-primary: #0F1115;
+  --bg-secondary: #16181D;
+  --bg-elevated: #1C1F26;
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+
+  --text-primary: #F2F3F5;
+  --text-secondary: #ABB0BA;
+  --text-muted: #6B7280;
+  --text-inverse: #14161A;
+
+  --border-default: #2A2D34;
+  --border-strong: #3A3E47;
+
+  --accent: #8B7CFF;
+  --accent-hover: #A196FF;
+  --accent-soft: #262146;
+
+  --status-open: #34D399;
+  --status-open-bg: #10291F;
+  --status-closed: #F87171;
+  --status-closed-bg: #2E1616;
+  --status-almost-full: #FBBF24;
+  --status-almost-full-bg: #2E2410;
+
+  --cat-music: #F2879C;
+  --cat-music-bg: #2E1A20;
+  --cat-food: #F5BE6E;
+  --cat-food-bg: #2E2515;
+  --cat-tech: #6AA3FA;
+  --cat-tech-bg: #16233D;
+  --cat-business: #8B7CFF;
+  --cat-business-bg: #262146;
+  --cat-default: #9AA0AC;
+  --cat-default-bg: #22252B;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-hover: 0 8px 20px rgba(139, 124, 255, 0.28);
+
+  /* ---------- Input States (dark) ---------- */
+  --input-bg: #1C1F26;
+  --input-border: var(--border-default);
+  --input-placeholder: var(--text-muted);
+
+  --input-focus-border: var(--accent);
+  --input-focus-ring: rgba(139, 124, 255, 0.22);
+
+  --input-error-border: var(--status-closed);
+  --input-error-bg: var(--status-closed-bg);
+  --input-error-ring: rgba(248, 113, 113, 0.18);
+  --input-error-text: var(--status-closed);
+
+  --input-success-border: var(--status-open);
+  --input-success-ring: rgba(52, 211, 153, 0.18);
+
+  --input-disabled-bg: #16181D;
+  --input-disabled-border: var(--border-default);
+  --input-disabled-text: var(--text-muted);
+
+  /* ---------- Floorplan / Booth Status (dark) ---------- */
+  --booth-available-fill: var(--accent-soft);
+  --booth-available-border: var(--accent);
+  --booth-booked-fill: #22252B;
+  --booth-booked-border: var(--border-strong);
+  --booth-booked-text: var(--text-muted);
+  --booth-pending-fill: var(--status-almost-full-bg);
+  --booth-pending-border: var(--status-almost-full);
+  --booth-selected-ring: rgba(139, 124, 255, 0.4);
+}

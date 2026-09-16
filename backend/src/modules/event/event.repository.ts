@@ -23,7 +23,7 @@ export class EventRepository {
         organizer: { select: { username: true } },
         booths: {
           where: { deletedAt: null },
-          select: { status: true, lockState: true }
+          select: { status: true, lockState: true, price: true }
         }
       }
     });

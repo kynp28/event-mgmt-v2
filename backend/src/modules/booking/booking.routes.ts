@@ -9,7 +9,31 @@ import { asyncHandler } from '../../common/utils/asyncHandler';
 const router = Router();
 const controller = new BookingController();
 
-// (Vendor) จองบูธ
+// (Vendor) จองบูธ (multiple)
+router.post(
+  '/multiple',
+  authenticate,
+  requirePermission('book_booth'),
+  asyncHandler(controller.createBookings)
+);
+
+// (Vendor) Hold booths
+router.post(
+  '/hold',
+  authenticate,
+  requirePermission('book_booth'),
+  asyncHandler(controller.holdBooths)
+);
+
+// (Vendor) Release booths
+router.post(
+  '/release',
+  authenticate,
+  requirePermission('book_booth'),
+  asyncHandler(controller.releaseBooths)
+);
+
+// (Vendor) จองบูธ (single)
 router.post(
   '/',
   authenticate,

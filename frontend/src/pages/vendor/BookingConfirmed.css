@@ -1,0 +1,47 @@
+.booking-confirmed-page {
+  /* Using global tokens from index.css/tokens.css */
+}
+
+.booking-confirmed-page .navbar { display: flex; justify-content: flex-end; padding: 16px 32px; }
+.booking-confirmed-page .theme-toggle { display: flex; align-items: center; gap: 6px; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: var(--radius-full); padding: 6px; cursor: pointer; }
+.booking-confirmed-page .theme-toggle svg { width: 16px; height: 16px; padding: 4px; border-radius: 50%; color: var(--text-muted); }
+
+.wrap { max-width: 480px; margin: 20px auto 60px; padding: 0 20px; }
+
+.success-icon { width: 64px; height: 64px; margin: 0 auto 18px; background: var(--status-open-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.success-icon svg { width: 32px; height: 32px; color: var(--status-open); }
+.headline { text-align: center; font-size: 22px; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); }
+.sub { text-align: center; font-size: 14px; color: var(--text-secondary); margin-top: 6px; margin-bottom: 28px; }
+
+.ticket {
+  background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); overflow: hidden; position: relative;
+}
+.ticket-top { padding: 24px 24px 20px; text-align: center; }
+.ticket-top .event { font-size: 16.5px; font-weight: 700; color: var(--text-primary); }
+.ticket-top .meta { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+.qr-box { display: flex; justify-content: center; margin: 18px 0 6px; }
+.booking-ref { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .06em; color: var(--text-secondary); margin-bottom: 20px; }
+
+/* perforation */
+.perforation { position: relative; height: 1px; border-top: 1.5px dashed var(--border-strong); margin: 0 20px; }
+.perforation::before, .perforation::after {
+  content: ''; position: absolute; top: -11px; width: 22px; height: 22px; background: var(--bg-secondary); border-radius: 50%;
+}
+.perforation::before { left: -31px; }
+.perforation::after { right: -31px; }
+
+.ticket-bottom { padding: 20px 24px 24px; }
+.booth-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 13.5px; }
+.booth-row .tag { background: var(--accent-soft); color: var(--accent); padding: 3px 10px; border-radius: var(--radius-full); font-weight: 700; font-size: 12px; }
+.booth-row .price { color: var(--text-secondary); }
+.total-line { display: flex; justify-content: space-between; padding-top: 12px; margin-top: 6px; border-top: 1px solid var(--border-default); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+
+.booking-confirmed-page .actions { display: flex; gap: 10px; margin-top: 22px; }
+.booking-confirmed-page .btn { flex: 1; padding: 13px; border-radius: var(--radius-md); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; text-align: center; }
+.booking-confirmed-page .btn.primary { background: var(--accent); color: #fff; border: none; }
+.booking-confirmed-page .btn.primary:hover { background: var(--accent-hover); }
+.booking-confirmed-page .btn.secondary { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-default); }
+
+.next-note { text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 20px; line-height: 1.7; }

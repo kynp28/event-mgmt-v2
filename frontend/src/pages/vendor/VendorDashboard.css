@@ -1,0 +1,32 @@
+.my-bookings-page { max-width: 720px; margin: 0 auto; padding: 32px 24px 80px; }
+.my-bookings-page .page-title { font-size: 24px; font-weight: 800; letter-spacing: -.01em; margin-bottom: 4px; color: var(--text-primary); }
+.my-bookings-page .page-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 22px; }
+
+.my-bookings-page .tabs { display: flex; gap: 6px; background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: 5px; margin-bottom: 22px; width: fit-content; }
+.my-bookings-page .tab { padding: 8px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: background var(--transition-fast), color var(--transition-fast); }
+.my-bookings-page .tab.active { background: var(--accent); color: #fff; }
+
+.my-bookings-page .list { display: flex; flex-direction: column; gap: 14px; }
+
+.booking-card {
+  background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+  display: flex; overflow: hidden; box-shadow: var(--shadow-sm); cursor: pointer;
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+.booking-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.bc-img { width: 110px; flex-shrink: 0; background: var(--bg-secondary); }
+.bc-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bc-body { flex: 1; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.bc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.bc-title { font-size: 14.5px; font-weight: 700; line-height: 1.35; color: var(--text-primary); }
+.status-pill { flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: var(--radius-full); white-space: nowrap; }
+.status-pill.upcoming { background: var(--status-open-bg); color: var(--status-open); }
+.status-pill.pending { background: var(--status-almost-full-bg); color: var(--status-almost-full); }
+.status-pill.past { background: var(--bg-secondary); color: var(--text-muted); }
+.status-pill.cancelled { background: var(--status-closed-bg); color: var(--status-closed); }
+.bc-meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+.bc-meta svg { width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; }
+.bc-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.booth-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.booth-tag { font-size: 11px; font-weight: 700; background: var(--accent-soft); color: var(--accent); padding: 3px 8px; border-radius: var(--radius-sm); }
+.bc-ref { font-size: 11px; color: var(--text-muted); font-weight: 600; letter-spacing: .03em; }

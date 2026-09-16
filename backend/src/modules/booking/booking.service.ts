@@ -11,6 +11,45 @@ export class BookingService {
     private readonly eventRepository = new EventRepository()
   ) {}
 
+  async holdBooths(vendorId: number, eventId: number, boothIds: number[]) {
+    // Check if event is open
+    const event = await this.eventRepository.findEventById(eventId);
+    if (!event || new Date(event.endDate) < new Date() || event.eventStatus !== 'open') {
+      throw new ConflictError('อีเวนต์นี้สิ้นสุดระยะเวลาจัดงานแล้วหรือปิดรับจอง');
+    }
+
+    // Hold booths temporarily
+    const affected = await this.boothRepository.updateManyBooths(boothIds, {
+      lockState: 'payment_pending',
+      lockedByUserId: vendorId,
+      lockedAt: new Date()
+    });
+
+    return { success: true, count: affected.count };
+  }
+
+  async releaseBooths(vendorId: number, eventId: number, boothIds: number[]) {
+    await this.boothRepository.updateManyBooths(boothIds, {
+      lockState: 'none',
+      lockedByUserId: null,
+      lockedAt: null
+    });
+    return { success: true };
+  }
+
+  async createBookings(vendorId: number, eventId: number, boothIds: number[]) {
+    const results = [];
+    for (const boothId of boothIds) {
+      try {
+        const result = await this.createBooking(vendorId, eventId, boothId);
+        results.push(result);
+      } catch (err) {
+        console.error(`Failed to book booth ${boothId}:`, err);
+      }
+    }
+    return results;
+  }
+
   async createBooking(vendorId: number, eventId: number, boothId: number) {
     const booth = await this.boothRepository.findBoothById(boothId);
     if (!booth) {

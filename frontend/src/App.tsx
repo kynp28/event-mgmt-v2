@@ -13,6 +13,8 @@ import { ManageBooths } from './pages/organizer/ManageBooths';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
 import { ManageEvents } from './pages/organizer/ManageEvents';
 import { EditEvent } from './pages/organizer/EditEvent';
+import { Checkout } from './pages/vendor/Checkout';
+import { BookingConfirmed } from './pages/vendor/BookingConfirmed';
 import { EventDetails } from './pages/vendor/EventDetails';
 import { ManageBookings } from './pages/organizer/ManageBookings';
 import { OrganizerRequestForm } from './pages/vendor/OrganizerRequestForm';
@@ -47,7 +49,14 @@ function App() {
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/events" element={<BrowseEvents />} />
-              <Route path="/events/:id" element={<EventDetails />} />
+            </Route>
+
+            {/* Event Specific Routes (Custom Navbars) */}
+            <Route path="/events/:id" element={<EventDetails />} />
+            
+            <Route element={<ProtectedRoute requiredRole="vendor" />}>
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/booking-confirmed" element={<BookingConfirmed />} />
             </Route>
             
             {/* Admin Dashboard Routes */}
